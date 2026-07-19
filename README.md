@@ -1,66 +1,112 @@
-# ECE1508-GenAI-Group-14-VAE_vs_DDPM
-# Abstract
+# VAE vs DDPM on Fashion-MNIST
 
-## Summary of the Problem
+An end-to-end comparison of a convolutional Variational Autoencoder (VAE) and
+a Denoising Diffusion Probabilistic Model (DDPM) trained under the same
+Fashion-MNIST experimental setting. The project covers training, sampling,
+quantitative evaluation, qualitative analysis, checkpointing, and automatic
+report generation.
 
-This project proposes a comparative study of Variational Autoencoders (VAEs) and Denoising Diffusion Probabilistic Models (DDPMs) for image generation on Fashion-MNIST. The main idea of the project is to understand how two different generative learning approaches perform under the same dataset and experimental setting.
+The original project proposal and literature references are available in
+[PROJECT_ABSTRACT.md](PROJECT_ABSTRACT.md).
 
-VAEs generate images by compressing data into a latent space and sampling from it [1], while DDPMs generate images by starting with random noise and gradually denoising it into a realistic image [2]. By comparing these two methods, the project aims to explain the practical trade-offs between latent-variable generation and diffusion-based generation.
+## Results
 
-## Key Outputs
+The included report-profile run used 60,000 training images, 10,000 test
+images, and 5,000 generated evaluation samples per model. It was executed on
+an NVIDIA GeForce RTX 5070 Ti using PyTorch 2.11.0 with CUDA 12.8.
 
-The key outputs of this project will include:
+| Metric | VAE | DDPM |
+| --- | ---: | ---: |
+| Custom classifier-feature FID (lower is better) | 51.1207 | **7.6580** |
+| Custom classifier-feature KID (lower is better) | 1.8737 | **0.3257** |
+| Mean classifier confidence | 0.7040 | **0.8322** |
+| Recognizability rate at 0.8 confidence | 41.0% | **65.6%** |
+| Class coverage | 10/10 | 10/10 |
+| Normalized class-distribution entropy | 0.9310 | **0.9911** |
+| Training time | **0.37 min** | 4.76 min |
+| Sampling time per image | **0.0075 ms** | 8.0151 ms |
 
-* Trained VAE and DDPM models
-* Generated image samples
-* Visual comparison grids
-* Training loss curves
-* Evaluation results for each model
+The Fashion-MNIST evaluation classifier reached **91.34% test accuracy**.
+FID and KID are computed from its 128-dimensional features rather than from an
+ImageNet Inception network, making them more appropriate for 28x28 grayscale
+fashion images. They should therefore be interpreted as dataset-specific
+metrics, not directly compared with standard ImageNet FID/KID scores.
 
-The models will be evaluated using both qualitative and quantitative differentiation metrics, including sample quality, distribution similarity, diversity, generation structure, memorization, training stability, and computational cost.
+See [RESULTS_SUMMARY.md](vae_ddpm_fashionmnist_results/RESULTS_SUMMARY.md) for
+the generated interpretation and
+[model_comparison_metrics.csv](vae_ddpm_fashionmnist_results/tables/model_comparison_metrics.csv)
+for all recorded metrics.
 
-The details of the evaluation areas are shown below:
+## Repository contents
 
-| Evaluation Area         | Metric / Method                                        | Purpose                                                                                           |
-| ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Sample Quality          | Visual sample grids                                    | Check whether generated images are clear, sharp, and recognizable                                 |
-| Distribution Similarity | FID or custom classifier-based FID                     | Measure how close generated images are to real images [3]                                         |
-| Distribution Similarity | KID                                                    | Provide another distribution-level quality metric, especially useful for smaller sample sizes [4] |
-| Diversity               | Class coverage and class distribution entropy          | Check whether the model generates all clothing categories or only a few                           |
-| Generation Structure    | VAE latent interpolation and DDPM denoising trajectory | Compare how each model represents and generates images                                            |
-| Memorization Check      | Nearest-neighbor comparison                            | Check whether generated images are new or copied from training images                             |
-| Training Stability      | Loss curves and failure cases                          | Compare whether training is smooth, unstable, or prone to failure                                 |
-| Compute Cost            | Training time and sampling time                        | Compare practical efficiency and resource requirements                                            |
+- `complete_project.py` - complete command-line experiment
+- `VAE_vs_DDPM_FashionMNIST_Complete.ipynb` - notebook version
+- `run.ps1` - Windows launcher with profile selection
+- `vae_ddpm_fashionmnist_results/` - complete generated results, figures,
+  histories, samples, feature arrays, and trained checkpoints
+- `PROPOSAL_METRIC_MAPPING.md` - mapping between proposal goals and metrics
+- `PROJECT_ABSTRACT.md` - original project abstract and references
 
-## Course Components
+## Setup
 
-This project covers two major course components: VAEs and Diffusion Models.
+Python 3.12 is recommended.
 
-The VAE part connects to variational inference, latent-variable models, and data generation by sampling from latent space. The DDPM part connects to probabilistic diffusion models, including the forward noising process, reverse denoising process, and sampling from learned distributions.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-## Required Resources
+For RTX 50-series GPUs, install a Blackwell-compatible CUDA wheel before the
+remaining requirements:
 
-The main required resource is the Fashion-MNIST dataset, which contains 60,000 training images and 10,000 test images of 28 × 28 grayscale fashion items across 10 classes [5].
+```powershell
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+pip install numpy pandas scipy matplotlib tqdm tabulate
+```
 
-We will load and preprocess the dataset using Torchvision, implement both models in Python with PyTorch, and use NumPy, Matplotlib, TorchMetrics, and related packages for training, visualization, and evaluation.
+Fashion-MNIST is downloaded automatically on the first run.
 
-Because DDPM training and sampling are more computationally expensive than VAE experiments, we plan to use Google Colab as the main training environment and run smaller tests locally when feasible.
+## Running the experiment
 
-The final repository will include:
+On Windows:
 
-* A documented codebase
-* A `README.md` file
-* A reproducible environment file
-* A demo notebook showing model training, sampling, and evaluation
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run.ps1 -Profile report
+```
 
-## References
+Available profiles are:
 
-[1] D. P. Kingma and M. Welling, “Auto-Encoding Variational Bayes,” *arXiv preprint arXiv:1312.6114*, 2013. [Online]. Available: https://arxiv.org/abs/1312.6114
+- `quick` - end-to-end smoke test
+- `standard` - balanced runtime and quality
+- `report` - full 35-epoch DDPM run with 5,000 evaluation samples
 
-[2] J. Ho, A. Jain, and P. Abbeel, “Denoising Diffusion Probabilistic Models,” *arXiv preprint arXiv:2006.11239*, 2020. [Online]. Available: https://arxiv.org/abs/2006.11239
+Alternatively:
 
-[3] M. Heusel, H. Ramsauer, T. Unterthiner, B. Nessler, and S. Hochreiter, “GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium,” *Advances in Neural Information Processing Systems*, 2017. [Online]. Available: https://arxiv.org/abs/1706.08500
+```powershell
+$env:EXPERIMENT_PROFILE = "report"
+python complete_project.py
+```
 
-[4] M. Bińkowski, D. J. Sutherland, M. Arbel, and A. Gretton, “Demystifying MMD GANs,” *arXiv preprint arXiv:1801.01401*, 2018. [Online]. Available: https://arxiv.org/abs/1801.01401
+On GPUs with at least 14 GB VRAM, the code automatically enables larger batch
+sizes, FP16 autocast, TF32, pinned-memory prefetching, and cuDNN autotuning.
+Batch sizes can be overridden with `CLASSIFIER_BATCH_SIZE`, `VAE_BATCH_SIZE`,
+and `DDPM_BATCH_SIZE`.
 
-[5] H. Xiao, K. Rasul, and R. Vollgraf, “Fashion-MNIST: A Novel Image Dataset for Benchmarking Machine Learning Algorithms,” *arXiv preprint arXiv:1708.07747*, 2017. [Online]. Available: https://arxiv.org/abs/1708.07747
+Existing profile-specific checkpoints are reused automatically. Delete or move
+the relevant checkpoint only when a fresh training run is required.
+
+## Evaluation outputs
+
+The pipeline generates:
+
+- real/VAE/DDPM image grids and failure-case figures
+- classifier-feature FID and KID
+- recognizability, confidence, coverage, and class-entropy statistics
+- VAE interpolation and DDPM denoising trajectories
+- nearest-neighbor memorization analysis
+- sharpness and feature-diversity proxies
+- training curves, timing, parameter counts, and peak GPU memory
+- CSV/JSON results and trained model checkpoints
+
