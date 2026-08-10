@@ -27,3 +27,4 @@ vae_ddpm_fashionmnist_results/report_presentation_package.zip
 .idea/
 .DS_Store
 Thumbs.db
+tmp/
