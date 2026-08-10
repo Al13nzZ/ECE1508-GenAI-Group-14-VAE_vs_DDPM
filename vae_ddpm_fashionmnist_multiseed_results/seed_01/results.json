@@ -1,0 +1,172 @@
+{
+  "config": {
+    "profile": "report",
+    "seed": 1,
+    "data_dir": "C:\\Users\\jenny\\Desktop\\vae_ddpm_fashionmnist_project\\ECE1508-GenAI-Group-14-VAE_vs_DDPM\\data",
+    "output_dir": "C:\\Users\\jenny\\Desktop\\vae_ddpm_fashionmnist_project\\ECE1508-GenAI-Group-14-VAE_vs_DDPM\\vae_ddpm_fashionmnist_multiseed_results\\seed_01",
+    "resume_if_available": true,
+    "num_workers": 4,
+    "classifier_batch_size": 1024,
+    "vae_batch_size": 1024,
+    "ddpm_batch_size": 1024,
+    "classifier_lr": 0.001,
+    "vae_lr": 0.002,
+    "ddpm_lr": 0.0002,
+    "weight_decay": 1e-05,
+    "vae_beta": 1.0,
+    "latent_dim": 32,
+    "ema_decay": 0.995,
+    "grad_clip_norm": 1.0,
+    "classifier_epochs": 12,
+    "vae_epochs": 25,
+    "ddpm_epochs": 35,
+    "diffusion_steps": 100,
+    "eval_samples": 5000,
+    "kid_repeats": 20,
+    "kid_subset_size": 1000,
+    "nn_generated_samples": 128,
+    "nn_reference_samples": 10000,
+    "trajectory_frames": 10
+  },
+  "classifier": {
+    "test_loss": 0.24094185180664063,
+    "test_accuracy": 0.9146,
+    "training_seconds": 29.84694490000038,
+    "peak_gpu_memory_mb": 915.3779296875,
+    "trainable_parameters": 157098
+  },
+  "vae_test_loss": {
+    "total": 238.40421630859376,
+    "reconstruction": 222.03852778320314,
+    "kl": 16.365688388061525
+  },
+  "models": [
+    {
+      "model": "VAE",
+      "custom_fid": 47.513019426744506,
+      "custom_kid_mean": 1.9778505086898803,
+      "custom_kid_std": 0.09525635568623486,
+      "mean_classifier_confidence": 0.702627956867218,
+      "median_classifier_confidence": 0.721345067024231,
+      "recognizability_rate_at_0.8": 0.4112,
+      "class_coverage": 10,
+      "class_distribution_entropy": 0.9312346212840684,
+      "inception_score": 3.8661307811737062,
+      "inception_score_std": 0.08044707111079942,
+      "feature_pairwise_distance": 9.32789421081543,
+      "sobel_sharpness": 0.5506861805915833,
+      "nearest_neighbor_mean_distance": 2.3642029762268066,
+      "nearest_neighbor_median_distance": 2.3084235191345215,
+      "memorization_rate_below_real_1pct_threshold": 0.0078125,
+      "training_minutes": 0.4238234133333511,
+      "sampling_total_seconds": 0.03444329999911133,
+      "sampling_ms_per_image": 0.006888659999822267,
+      "trainable_parameters": 1700865,
+      "peak_gpu_memory_mb": 558.15380859375,
+      "final_training_loss": 236.33343025716147,
+      "training_tail_cv": 0.00048749476393878695,
+      "training_loss_slope": -1.5234726891463821,
+      "nonfinite_loss_count": 0
+    },
+    {
+      "model": "DDPM",
+      "custom_fid": 8.208724460188137,
+      "custom_kid_mean": 0.3602756500244141,
+      "custom_kid_std": 0.05747615245318123,
+      "mean_classifier_confidence": 0.8429164290428162,
+      "median_classifier_confidence": 0.943484902381897,
+      "recognizability_rate_at_0.8": 0.6784,
+      "class_coverage": 10,
+      "class_distribution_entropy": 0.9860269435875838,
+      "inception_score": 6.37583909034729,
+      "inception_score_std": 0.10363914880128788,
+      "feature_pairwise_distance": 13.898831367492676,
+      "sobel_sharpness": 0.6706401705741882,
+      "nearest_neighbor_mean_distance": 1.7199952602386475,
+      "nearest_neighbor_median_distance": 1.6917425394058228,
+      "memorization_rate_below_real_1pct_threshold": 0.03125,
+      "training_minutes": 4.85458799333331,
+      "sampling_total_seconds": 40.65140640000027,
+      "sampling_ms_per_image": 8.130281280000053,
+      "trainable_parameters": 5216833,
+      "peak_gpu_memory_mb": 6274.93408203125,
+      "final_training_loss": 0.07045610647263198,
+      "training_tail_cv": 0.0036592721046158285,
+      "training_loss_slope": -0.0017585693972359234,
+      "nonfinite_loss_count": 0
+    }
+  ],
+  "class_distributions": [
+    {
+      "class_index": 0,
+      "class_name": "T-shirt/top",
+      "real_test_distribution": 0.1044,
+      "vae_distribution": 0.1594,
+      "ddpm_distribution": 0.0778
+    },
+    {
+      "class_index": 1,
+      "class_name": "Trouser",
+      "real_test_distribution": 0.0958,
+      "vae_distribution": 0.074,
+      "ddpm_distribution": 0.1254
+    },
+    {
+      "class_index": 2,
+      "class_name": "Pullover",
+      "real_test_distribution": 0.1018,
+      "vae_distribution": 0.2082,
+      "ddpm_distribution": 0.0982
+    },
+    {
+      "class_index": 3,
+      "class_name": "Dress",
+      "real_test_distribution": 0.102,
+      "vae_distribution": 0.0716,
+      "ddpm_distribution": 0.1462
+    },
+    {
+      "class_index": 4,
+      "class_name": "Coat",
+      "real_test_distribution": 0.0974,
+      "vae_distribution": 0.0386,
+      "ddpm_distribution": 0.104
+    },
+    {
+      "class_index": 5,
+      "class_name": "Sandal",
+      "real_test_distribution": 0.0958,
+      "vae_distribution": 0.0174,
+      "ddpm_distribution": 0.1126
+    },
+    {
+      "class_index": 6,
+      "class_name": "Shirt",
+      "real_test_distribution": 0.0962,
+      "vae_distribution": 0.0776,
+      "ddpm_distribution": 0.0966
+    },
+    {
+      "class_index": 7,
+      "class_name": "Sneaker",
+      "real_test_distribution": 0.1016,
+      "vae_distribution": 0.0868,
+      "ddpm_distribution": 0.1088
+    },
+    {
+      "class_index": 8,
+      "class_name": "Bag",
+      "real_test_distribution": 0.1042,
+      "vae_distribution": 0.1396,
+      "ddpm_distribution": 0.0768
+    },
+    {
+      "class_index": 9,
+      "class_name": "Ankle boot",
+      "real_test_distribution": 0.1008,
+      "vae_distribution": 0.1268,
+      "ddpm_distribution": 0.0536
+    }
+  ],
+  "metric_note": "FID and KID use 128-dimensional features from a Fashion-MNIST classifier trained on real data. They are not standard Inception metrics."
+}

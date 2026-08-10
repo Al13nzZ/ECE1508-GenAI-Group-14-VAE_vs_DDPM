@@ -122,7 +122,12 @@ class ExperimentConfig:
 
 
 CFG = ExperimentConfig(
-    profile=os.environ.get("EXPERIMENT_PROFILE", "report").lower()
+    profile=os.environ.get("EXPERIMENT_PROFILE", "report").lower(),
+    seed=int(os.environ.get("EXPERIMENT_SEED", "42")),
+    data_dir=os.environ.get("EXPERIMENT_DATA_DIR", "./data"),
+    output_dir=os.environ.get(
+        "EXPERIMENT_OUTPUT_DIR", "./vae_ddpm_fashionmnist_results"
+    ),
 ).apply_profile()
 
 # Throughput-oriented defaults for modern 16 GB GPUs (including RTX 5070 Ti).
@@ -301,7 +306,9 @@ def save_pair_grid(
 
 
 def model_state_path(name: str) -> Path:
-    signature = f"{CFG.profile}_z{CFG.latent_dim}_T{CFG.diffusion_steps}"
+    signature = (
+        f"{CFG.profile}_seed{CFG.seed}_z{CFG.latent_dim}_T{CFG.diffusion_steps}"
+    )
     return MODEL_DIR / f"{name}_{signature}.pt"
 
 
@@ -1943,4 +1950,5 @@ def package_results() -> Path:
 
 if __name__ == "__main__":
     run_complete_experiment()
-    package_results()
+    if os.environ.get("PACKAGE_RESULTS", "1") != "0":
+        package_results()

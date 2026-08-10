@@ -1,0 +1,11 @@
+class_index,class_name,real_test_distribution,vae_distribution,ddpm_distribution
+0,T-shirt/top,0.097,0.1072,0.0724
+1,Trouser,0.1012,0.0932,0.1092
+2,Pullover,0.1044,0.1746,0.0862
+3,Dress,0.0974,0.1058,0.1362
+4,Coat,0.0994,0.0766,0.0966
+5,Sandal,0.0964,0.0126,0.1394
+6,Shirt,0.1022,0.0958,0.1138
+7,Sneaker,0.1046,0.0608,0.1268
+8,Bag,0.1002,0.1318,0.055
+9,Ankle boot,0.0972,0.1416,0.0644
