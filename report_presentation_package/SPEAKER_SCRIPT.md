@@ -15,9 +15,10 @@ question: under the same dataset and evaluation pipeline, how much generation
 quality does iterative diffusion gain over direct latent-variable decoding,
 and what computational cost accompanies that improvement?
 
-To answer this, we implemented both models, generated 5,000 evaluation images
-from each, and compared distribution similarity, recognizability, class
-diversity, training behavior, memory use, and generation speed. Our central
+To answer this, we repeated the complete experiment across ten random seeds,
+generating 5,000 evaluation images per model per seed, or 50,000 per model in
+total. We compared distribution similarity, recognizability, class diversity,
+training behavior, memory use, and generation speed. Our central
 result is a clear quality–efficiency trade-off: the DDPM generated stronger and
 more balanced samples, while the VAE was dramatically faster and smaller.”
 
@@ -82,13 +83,16 @@ images and their distribution-level results.”
 
 **Target time: 1 minute 35 seconds**
 
-“The sample comparison at the top shows equal numbers of real, VAE, and DDPM
-images. Both models learn recognizable clothing structure, but the VAE outputs
+“The sample strip at the top is a representative qualitative example because
+images themselves cannot be averaged across seeds. All quantitative graphs on
+this slide show the mean and sample standard deviation from ten independent
+runs. Both models learn recognizable clothing structure, but the VAE outputs
 are generally softer, with less distinct boundaries between the object and
 background. DDPM samples have clearer edges and more recognizable object
 shapes.
 
-The numerical results agree with this visual pattern. Classifier-feature FID
+The six-panel quality figure shows that the numerical results agree with this
+visual pattern. Classifier-feature FID
 is 43.32 plus or minus 4.51 for the VAE and 11.14 plus or minus 5.79 for the
 DDPM. Lower is better because this
 metric compares the means and covariances of the real and generated feature
@@ -129,8 +133,9 @@ appears in computational cost.”
 
 **Target time: 1 minute 35 seconds**
 
-“The two graphs and the resource table quantify the price of the DDPM’s better
-samples. All measurements come from the same RTX 5070 Ti system using PyTorch
+“The computational dashboard reports ten-seed means with sample-standard-
+deviation error bars and quantifies the price of the DDPM’s better samples.
+All measurements come from the same RTX 5070 Ti system using PyTorch
 2.11, CUDA 12.8, mixed precision, and a batch size of 1024.
 
 VAE training averaged 0.411 plus or minus 0.020 minutes, compared with 4.811

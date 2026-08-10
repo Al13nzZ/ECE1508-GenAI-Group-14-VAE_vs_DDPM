@@ -6,17 +6,19 @@ tensor files, and redundant plots.
 
 ## Recommended main-report figures
 
-1. `figures/main/real_vae_ddpm_comparison.png` — primary qualitative result.
+1. `figures/main/real_vae_ddpm_comparison.png` — representative qualitative
+   result; label it explicitly because images cannot be averaged across seeds.
 2. `figures/main/vae_latent_interpolation.png` and
    `figures/main/ddpm_denoising_trajectory.png` — generation mechanisms.
-3. `figures/main/class_distribution_comparison.png` — diversity evidence;
-   move this from the draft appendix into the quantitative-results section.
-4. `figures/main/training_time_comparison.png` and
-   `figures/main/sampling_time_comparison.png` — efficiency evidence. Put them
-   together as one two-panel figure after the paragraph about compute cost.
+3. `figures/multiseed/quality_metrics_multiseed.png` — primary quantitative
+   quality figure; all six panels report ten-seed mean ± sample SD.
+4. `figures/multiseed/class_distribution_multiseed.png` — averaged diversity
+   evidence with per-class uncertainty bars.
+5. `figures/multiseed/compute_metrics_multiseed.png` — primary efficiency
+   figure with training, sampling, and memory results across ten seeds.
 
-The FID/KID values are already clearer in the main table than in separate bar
-charts, so the individual FID/KID plots are kept as optional slide assets.
+Use the dashboards in the main report and slides. Individual multi-seed plots
+remain available when a larger single-metric figure is required.
 
 ## Appendix-only figures
 

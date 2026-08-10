@@ -47,6 +47,33 @@ def save_metric_plot(frame: pd.DataFrame, metric: str, label: str) -> None:
     plt.close(fig)
 
 
+def save_metric_dashboard(
+    frame: pd.DataFrame,
+    specifications: list[tuple[str, str]],
+    title: str,
+    filename: str,
+    shape: tuple[int, int],
+) -> None:
+    fig, axes = plt.subplots(*shape, figsize=(12, 7 if shape[0] == 2 else 4.5))
+    axes_array = np.asarray(axes).reshape(-1)
+    colors = ["#4C78A8", "#F58518"]
+    for ax, (metric, label) in zip(axes_array, specifications):
+        summary = frame.groupby("model")[metric].agg(["mean", "std"]).reindex(["VAE", "DDPM"])
+        bars = ax.bar(summary.index, summary["mean"], yerr=summary["std"],
+                      capsize=5, color=colors, edgecolor="black", linewidth=0.6)
+        ax.set_title(label, fontsize=11)
+        ax.grid(axis="y", alpha=0.22)
+        for bar, mean, std in zip(bars, summary["mean"], summary["std"]):
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                    f"{mean:.3g} ± {std:.2g}", ha="center", va="bottom", fontsize=8)
+    for ax in axes_array[len(specifications):]:
+        ax.axis("off")
+    fig.suptitle(title, fontsize=15)
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.savefig(FIG_DIR / filename, dpi=240, bbox_inches="tight")
+    plt.close(fig)
+
+
 def main() -> None:
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     TABLE_DIR.mkdir(parents=True, exist_ok=True)
@@ -75,6 +102,32 @@ def main() -> None:
 
     for metric, label, _ in METRICS:
         save_metric_plot(all_metrics, metric, label)
+
+    save_metric_dashboard(
+        all_metrics,
+        [
+            ("custom_fid", "Classifier-feature FID ↓"),
+            ("custom_kid_mean", "Classifier-feature KID ↓"),
+            ("mean_classifier_confidence", "Mean confidence ↑"),
+            ("recognizability_rate_at_0.8", "Recognizability at 0.8 ↑"),
+            ("class_distribution_entropy", "Class entropy ↑"),
+            ("sobel_sharpness", "Sobel sharpness ↑"),
+        ],
+        "Generation quality across 10 random seeds (mean ± SD)",
+        "quality_metrics_multiseed.png",
+        (2, 3),
+    )
+    save_metric_dashboard(
+        all_metrics,
+        [
+            ("training_minutes", "Training time (minutes) ↓"),
+            ("sampling_ms_per_image", "Sampling latency (ms/image) ↓"),
+            ("peak_gpu_memory_mb", "Peak allocated memory (MB) ↓"),
+        ],
+        "Computational cost across 10 random seeds (mean ± SD)",
+        "compute_metrics_multiseed.png",
+        (1, 3),
+    )
 
     classes = pd.concat(class_frames, ignore_index=True)
     class_summary = classes.groupby(["class_index", "class_name"])[
@@ -123,6 +176,7 @@ def main() -> None:
         "class_distribution_entropy_multiseed.png", "sobel_sharpness_multiseed.png",
         "training_minutes_multiseed.png", "sampling_ms_per_image_multiseed.png",
         "peak_gpu_memory_mb_multiseed.png", "class_distribution_multiseed.png",
+        "quality_metrics_multiseed.png", "compute_metrics_multiseed.png",
     ]
     target = PRESENTATION_DIR / "figures" / "multiseed"
     target.mkdir(parents=True, exist_ok=True)

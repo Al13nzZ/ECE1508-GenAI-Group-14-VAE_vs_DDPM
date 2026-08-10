@@ -6,7 +6,8 @@
 2. Fix `shared evaluatioGenAIn pipeline` to `shared evaluation pipeline`.
 3. In the Introduction, cite Fashion-MNIST as `[3]`, not `[2]`.
 4. Ensure the figure directory in the LaTeX project matches the packaged
-   `figures/` paths, or add `\graphicspath{{figures/main/}{figures/appendix/}}`.
+   paths, including `figures/main/`, `figures/multiseed/`, and
+   `figures/appendix/`.
 5. State that timing values are from one hardware/software run and depend on
    batching and implementation. This is especially important for the very low
    VAE per-image sampling time.
@@ -14,9 +15,9 @@
    `FID/KID` in conclusions or slide labels.
 7. Add the class-distribution plot to the main quantitative section. It is the
    evidence for the claim that DDPM output is more balanced.
-8. Add training- and sampling-time plots as a two-panel main-text figure. The
-   quality-efficiency trade-off is the report's central conclusion and should
-   have visual evidence.
+8. Use `quality_metrics_multiseed.png`, `class_distribution_multiseed.png`, and
+   `compute_metrics_multiseed.png` as the main quantitative figures. They show
+   ten-seed mean ± sample SD and directly support the central conclusion.
 
 ## Suggested concise replacement for the teamwork section
 

@@ -109,9 +109,13 @@ recognizable images, and a more balanced predicted class distribution.**
 
 ### Figures and layout
 
-- Top 48%: `figures/main/real_vae_ddpm_comparison.png`, full width.
-- Bottom-left 32%: `figures/multiseed/class_distribution_multiseed.png`.
-- Bottom-right: compact quantitative table.
+- Top strip: `figures/main/real_vae_ddpm_comparison.png`, labeled
+  **representative qualitative samples; quantitative results use 10 seeds**.
+- Main quantitative panel: `figures/multiseed/quality_metrics_multiseed.png`.
+- Right or bottom inset: `figures/multiseed/class_distribution_multiseed.png`.
+- If space is tight, remove the repeated numerical table from the rendered
+  slide and keep only three callouts; the dashboard already contains all six
+  mean ± SD comparisons.
 
 ### Quantitative table shown on the slide
 
@@ -138,9 +142,9 @@ recognizable images, and a more balanced predicted class distribution.**
 
 ### Optional verbal result, not another slide element
 
-The DDPM nearest-neighbor memorization-screen rate was 0.78% under a strict
-real-data-calibrated threshold; VAE was 0%. This does not establish copying or
-prove that memorization is absent.
+The mean nearest-neighbor memorization-screen rate was 1.17% ± 1.12% for DDPM
+and 0.31% ± 0.40% for VAE under a strict real-data-calibrated threshold. This
+does not establish copying or prove that memorization is absent.
 
 ---
 
@@ -151,17 +155,11 @@ prove that memorization is absent.
 **The DDPM's quality improvement requires substantially greater sequential
 computation, memory, and model capacity.**
 
-### Top-left figure
+### Main figure
 
-`figures/multiseed/training_minutes_multiseed.png`
+`figures/multiseed/compute_metrics_multiseed.png`
 
-Caption on slide: **End-to-end measured training time on the same GPU**
-
-### Top-right figure
-
-`figures/multiseed/sampling_ms_per_image_multiseed.png`
-
-Caption on slide: **Batched generation latency per image**
+Caption on slide: **Ten-seed computational cost, mean ± sample SD**
 
 ### Main quantitative table
 
