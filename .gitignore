@@ -9,18 +9,21 @@ __pycache__/
 # Downloaded data and local packaging
 data/
 results.zip
+results_*/
+*_results/
+*_results.zip
+presentation_package*/
+presentation_package*.zip
 multiseed_run.log
-
-# Multi-seed runs: retain reproducibility records and metrics in Git, but not
-# bulky per-seed tensors/checkpoints or redundant per-seed rendered figures.
-vae_ddpm_fashionmnist_multiseed_results/seed_*/models/
-vae_ddpm_fashionmnist_multiseed_results/seed_*/samples/
-vae_ddpm_fashionmnist_multiseed_results/seed_*/figures/
-vae_ddpm_fashionmnist_multiseed_results/seed_*/tables/*.npy
-
-# Duplicate package copy; the maintained package is at repository root and in
-# the multi-seed results directory.
-vae_ddpm_fashionmnist_results/report_presentation_package.zip
+extended_benchmark_run.log
+extended_benchmark_error.log
+extended_benchmark.pid
+extended_benchmark_smoke/
+benchmark_v2_run.log
+benchmark_v2_error.log
+benchmark_v2.pid
+benchmark_v2_smoke/
+rejected_classifier_run/
 
 # Editor and OS files
 .vscode/

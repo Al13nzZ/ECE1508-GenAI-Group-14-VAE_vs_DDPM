@@ -6,3 +6,4 @@ scipy>=1.10
 matplotlib>=3.8
 tqdm>=4.66
 tabulate>=0.9
+datasets>=3.0,<5
