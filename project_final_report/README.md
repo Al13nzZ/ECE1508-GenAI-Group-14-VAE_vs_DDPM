@@ -66,10 +66,10 @@ tectonic -X compile report.tex --reruns 1
 - `memory_breakdown.png`
 - `supporting_quality.png`
 
-`TECHNICAL_REFERENCES.md` duplicates all technical citations in readable IEEE
+`markdown/TECHNICAL_REFERENCES.md` duplicates all technical citations in readable IEEE
 style with direct URLs. The same references are included in `report.tex`, so the
-report remains self-contained. `EXPERIMENT_ENVIRONMENT.md` records the local
+report remains self-contained. `markdown/EXPERIMENT_ENVIRONMENT.md` records the local
 hardware and software stack used for the definitive run.
-`HYPERPARAMETER_RATIONALE.md` records the selection protocol, exact validation
+`markdown/HYPERPARAMETER_RATIONALE.md` records the selection protocol, exact validation
 scores, reasons for structural choices, limitations of the bounded search, and
 the most useful follow-up ablations.

@@ -1,19 +1,25 @@
 \documentclass{article}
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2023
 \PassOptionsToPackage{numbers,compress}{natbib}
 \usepackage[final]{neurips}
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips}
 
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{hyperref}
-\usepackage{url}
-\usepackage{booktabs}
-\usepackage{amsfonts}
-\usepackage{amsmath}
-\usepackage{nicefrac}
-\usepackage{microtype}
-\usepackage{xcolor}
-\usepackage{graphicx}
-\usepackage{float}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amsmath}        % mathematical environments
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{graphicx}       % figures and image scaling
+\usepackage{float}          % H float placement
 
 \title{VAE, Pixel-Space DDPM, and Latent Diffusion for Apparel Image Generation Across Grayscale and Color Domains}
 
@@ -67,15 +73,28 @@ Pixel DDPM applies the objective to $3\times32\times32$ images; LDM applies it t
 \subsection{Datasets and controlled interface}
 Fashion-MNIST provides 60,000 training and 10,000 test images in ten balanced classes \citep{xiao2017fashion}. Images are resized from $28\times28$ to $32\times32$ and replicated to RGB. The second dataset is Fashion Product Images Small \citep{fpis}. We retain the 15 most frequent Apparel article types and form a deterministic stratified 85/15 split: 8,007 training and 1,423 test photographs. Images are center-padded to a square before resizing, preserving aspect ratio. This set introduces natural class imbalance, color, texture, pose, and background variation.
 
-\subsection{Models and task-specific evaluator}
-The spatial VAE uses residual convolutional blocks, GroupNorm, SiLU, two downsampling stages, a $4\times8\times8$ Gaussian latent, and symmetric nearest-neighbor upsampling. Pixel DDPM and LDM use two-resolution time-conditioned U-Nets with sinusoidal embeddings, residual blocks, skip connections, bottleneck self-attention, and EMA weights. Figure~\ref{fig:architecture} compares their generation paths. The frozen evaluator has 64/128/256-channel residual stages and a 256-dimensional feature vector, following the optimization motivation of residual learning \citep{he2016resnet}.
+\subsection{System configuration}
+All three systems use residual convolutional blocks, GroupNorm, and SiLU. The diffusion U-Nets additionally use sinusoidal time embeddings, skip connections, bottleneck self-attention, and EMA sampling weights. The frozen evaluator has 64/128/256-channel residual stages and a 256-dimensional feature vector \citep{he2016resnet}. Table~\ref{tab:configuration} summarizes the settings that determine the principal capacity and sampling differences.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.90\linewidth]{figures/model_architectures.png}
-  \caption{Sampling paths. VAE decodes once; DDPM denoises pixels for 100 steps; LDM denoises a spatial latent for 100 steps and then decodes.}
-  \label{fig:architecture}
-\end{figure}
+\begin{table}[H]
+\caption{Main experimental configuration. LDM training and parameter totals include its VAE.}
+\label{tab:configuration}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Setting & VAE & Pixel DDPM & LDM \\
+\midrule
+Generated representation & $4\!\times\!8\!\times\!8$ latent & $3\!\times\!32\!\times\!32$ pixels & $4\!\times\!8\!\times\!8$ latent \\
+Training updates & 3,000 & 5,000 & 3,000 VAE $+$ 5,000 denoiser \\
+Batch size & 256 & 256 & 256 \\
+Learning rate & $10^{-3}$ & $2\!\times\!10^{-4}$ & $10^{-3}$ / $2\!\times\!10^{-4}$ \\
+EMA decay & --- & 0.995 & 0.999 \\
+Generation path & One decoder pass & 100 pixel steps & 100 latent steps $+$ decode \\
+Trainable parameters & 1.955M & 5.787M & 7.743M \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Methodology}
 \subsection{Optimization and sampling budgets}
@@ -136,7 +155,14 @@ Color products & VAE  & $83.88\pm3.80$ & $.940\pm.049$ & $.790\pm.006$ & $.572\p
 
 Figure~\ref{fig:qualitative} and Table~\ref{tab:quality} show the same distribution-fidelity ordering on both datasets. DDPM reduces VAE FID by 75.1\% on Fashion-MNIST and 80.1\% on color products; it reduces LDM FID by 43.0\% and 50.5\%. KID corroborates rather than reverses this result: relative to VAE, DDPM lowers KID by 68.7\% and 77.9\%. Its JSD reductions are 80.2\% and 89.8\%, showing that its advantage extends from feature moments to class-proportion agreement.
 
-The ordering is not caused by one favorable initialization. Fashion-MNIST FID ranges are 28.13--31.39 (DDPM), 50.79--52.60 (LDM), and 116.19--122.62 (VAE); the corresponding color ranges are 15.46--17.78, 32.25--37.54, and 79.21--89.73. Thus, the best and worst seed intervals do not overlap, and every model--dataset FID coefficient of variation is below 6.6\%. Absolute values must not be compared across datasets because each uses a different evaluator and the color test set has fewer real references.
+The ordering is not caused by one favorable initialization. Fashion-MNIST FID ranges are 28.13--31.39 (DDPM), 50.79--52.60 (LDM), and 116.19--122.62 (VAE); the corresponding color ranges are 15.46--17.78, 32.25--37.54, and 79.21--89.73. Thus, the best and worst seed intervals in Figure~\ref{fig:seed-fid} do not overlap, and every model--dataset FID coefficient of variation is below 6.6\%. Absolute values must not be compared across datasets because each uses a different evaluator and the color test set has fewer real references.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.54\linewidth]{figures/seed_variability.png}
+\caption{Feature FID for every independently trained seed. Lines aid ranking comparison and do not imply a continuous seed variable.}
+\label{fig:seed-fid}
+\end{figure}
 
 \subsection{Recognizability, diversity, and sharpness}
 LDM has the highest confidence and recognizability: it exceeds DDPM recognizability by 4.62 percentage points on Fashion-MNIST and 3.46 points on color products. Its smoother, classifier-friendly images therefore look semantically decisive even though DDPM better matches the complete real distribution. All systems cover all 10 or 15 evaluator-predicted classes in every seed, so coverage alone fails to distinguish them.
@@ -174,7 +200,7 @@ Table~\ref{tab:supporting} explains the metric disagreement. LDM leads cIS and p
 
 The quality--compute frontier in Figure~\ref{fig:tradeoff} is substantial. Across datasets, VAE requires 1.61--1.66 minutes to train and 0.036 ms/image to sample; LDM requires 3.48--3.78 minutes and 0.763--0.765 ms/image; DDPM requires 5.55--5.62 minutes and 10.611--10.624 ms/image. LDM is 13.9 times faster than DDPM and reduces its end-to-end training time by 33--37\%; VAE is about 292 times faster than DDPM and 21 times faster than LDM. These batched rates correspond approximately to 27,600, 1,310, and 94 images/s for VAE, LDM, and DDPM, not single-request latency.
 
-Complete-system parameter counts are 1.955M, 7.743M, and 5.787M for VAE, LDM, and DDPM. Despite having 33.8\% more parameters than DDPM because its total includes the autoencoder, LDM has 32\% lower measured peak memory: 5.20--5.21 GB versus 7.68--7.70 GB. VAE peaks at 6.30--6.32 GB. This inversion shows that the 4,096-sample activation geometry, rather than weights alone, dominates high-throughput inference memory. All 30 runs have finite losses and no detected collapse. Appendix~\ref{app:diagnostics} provides convergence, per-seed FID, and separate training/sampling memory plots.
+Complete-system parameter counts are 1.955M, 7.743M, and 5.787M for VAE, LDM, and DDPM. Despite having 33.8\% more parameters than DDPM because its total includes the autoencoder, LDM has 32\% lower measured peak memory: 5.20--5.21 GB versus 7.68--7.70 GB. VAE peaks at 6.30--6.32 GB. This inversion shows that the 4,096-sample activation geometry, rather than weights alone, dominates high-throughput inference memory. All 30 runs have finite losses and no detected collapse. Appendix~\ref{app:diagnostics} provides convergence and separate training/sampling memory plots.
 
 \begin{table}[H]
 \caption{Computational results, mean $\pm$ sample SD over five seeds. LDM totals include its VAE; sampling is batched throughput.}
@@ -299,15 +325,8 @@ An initially unstable LDM produced standardized sampled latent SD 13.3 and maxim
 
 \begin{figure}[ht]
 \centering
-\begin{minipage}{0.56\linewidth}
-  \includegraphics[width=\linewidth]{figures/training_curves.png}
-  \small (a) Mean $\pm$ SD training curves
-\end{minipage}\hfill
-\begin{minipage}{0.42\linewidth}
-  \includegraphics[width=\linewidth]{figures/seed_variability.png}
-  \small (b) Seed-level FID
-\end{minipage}
-\caption{Optimization convergence and run-to-run variability. Loss magnitudes are not comparable across objectives.}
+\includegraphics[width=0.78\linewidth]{figures/training_curves.png}
+\caption{Mean $\pm$ SD optimization curves over five seeds. Loss magnitudes are not comparable across objectives.}
 \end{figure}
 
 \begin{figure}[ht]
