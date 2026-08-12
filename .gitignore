@@ -61,3 +61,7 @@ project_final_report/*.synctex.gz
 .DS_Store
 Thumbs.db
 tmp/
+
+# The audited five-seed benchmark is a deliverable, not a disposable run.
+!results_final_3models_2datasets_5seeds/
+!results_final_3models_2datasets_5seeds/**

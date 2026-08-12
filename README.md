@@ -155,5 +155,9 @@ are reported alongside them to avoid relying on one score.
 - `validate_results.py`: completeness, configuration, and finite-value checks
 - `validate_report.py`: report citation, reference, table, and figure checks
 - `tests/test_pipeline.py`: fast model and metric smoke tests
+- `results_final_3models_2datasets_5seeds/`: complete audited output for all
+  30 runs, including per-seed metrics, training histories, sample grids,
+  evaluator diagnostics/checkpoints, and aggregate mean/SD results
 - `project_final_report/`: self-contained final report source, PDF, selected
-  figures, result tables, environment record, and IEEE references
+  figures, result tables, original formatting template, environment record,
+  and IEEE references

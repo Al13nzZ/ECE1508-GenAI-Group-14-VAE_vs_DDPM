@@ -1,6 +1,7 @@
 \documentclass{article}
 \PassOptionsToPackage{numbers,compress}{natbib}
 \usepackage[final]{neurips}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{hyperref}
@@ -12,6 +13,7 @@
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{float}
 
 \title{VAE, Pixel-Space DDPM, and Latent Diffusion for Apparel Image Generation Across Grayscale and Color Domains}
 
@@ -33,297 +35,166 @@
 }
 
 \begin{document}
+
 \maketitle
 
 \begin{abstract}
-This work compares three generative paradigms---a spatial variational autoencoder (VAE), a pixel-space denoising diffusion probabilistic model (DDPM), and a latent diffusion model (LDM)---on balanced grayscale Fashion-MNIST and an imbalanced 15-class color apparel subset. Each model--dataset pair is trained under five independent seeds, producing 30 trained generative models. Hyperparameters are selected using only training-derived validation sets, and a separately trained residual classifier supplies task-specific features and class diagnostics. Pixel DDPM obtains the lowest feature FID on both datasets: $29.64\pm1.49$ and $16.67\pm0.85$, compared with LDM's $52.01\pm0.71$ and $33.65\pm2.21$, and VAE's $119.10\pm2.87$ and $83.88\pm3.80$. LDM has the highest evaluator confidence and recognizability and samples approximately 13.9 times faster than pixel DDPM, whereas VAE is approximately 292 times faster than DDPM but has the largest distribution error. All models cover every evaluator class and all runs remain numerically finite. The evidence identifies a reproducible quality--compute frontier rather than a universally best model or a parameter-matched causal comparison of objectives.
+We compare a spatial variational autoencoder (VAE), pixel-space denoising diffusion probabilistic model (DDPM), and latent diffusion model (LDM) on balanced grayscale Fashion-MNIST and an imbalanced 15-class color-apparel subset. Each model--dataset pair is trained with five seeds, yielding 30 runs. A frozen residual classifier supplies task-specific features and class diagnostics. Pixel DDPM achieves the lowest feature FID on both datasets: $29.64\pm1.49$ and $16.67\pm0.85$, compared with LDM's $52.01\pm0.71$ and $33.65\pm2.21$, and VAE's $119.10\pm2.87$ and $83.88\pm3.80$. LDM samples 13.9 times faster than DDPM and gives the highest recognizability, while VAE is approximately 292 times faster than DDPM but has the largest distribution error. The results define a stable quality--compute frontier rather than a universally best model.
 \end{abstract}
 
-\section*{Statement of Team Contributions}
-All group members contributed to problem framing, implementation planning, experimental design, and result discussion. Jenny primarily worked on the VAE implementation, training pipeline, and latent-space experiments. Yuye primarily worked on the DDPM implementation, diffusion training and sampling pipeline, and denoising visualizations. Jasmine primarily handled the shared evaluation pipeline, quantitative metric analysis, result comparison, and report drafting. The LDM, second-dataset, multi-seed extension, and final interpretation were jointly reviewed and integrated.
+\section*{Assentation of Teamwork}
+All members contributed to problem framing, implementation planning, experimental design, and result discussion. Jenny primarily worked on the VAE implementation, training pipeline, and latent-space experiments. Yuye primarily worked on the DDPM implementation, diffusion training and sampling pipeline, and denoising visualizations. Jasmine primarily handled the shared evaluation pipeline, quantitative analysis, result comparison, and report drafting. The LDM, second-dataset, multi-seed extension, and final interpretation were jointly reviewed and integrated.
 
 \section{Introduction}
-Deep generative models can represent an image distribution through fundamentally different computational paths. A VAE maps an image to a regularized probability distribution in a compact latent space and produces a sample with one decoder pass \citep{kingma2014vae}. A DDPM instead learns to reverse a gradual Gaussian corruption process and generates an image through many sequential denoising updates \citep{ho2020ddpm}. Latent diffusion combines these ideas: diffusion operates in a learned spatial latent representation, after which a decoder maps the denoised latent to image space \citep{rombach2022ldm}. The three approaches suggest different balances among fidelity, coverage, latency, and memory.
+Generative image models can represent the same data distribution through very different computational paths. A VAE regularizes a compact latent distribution and generates with one decoder pass \citep{kingma2014vae}. A DDPM learns to reverse gradual Gaussian corruption through sequential denoising \citep{ho2020ddpm}. An LDM performs this diffusion in a learned spatial latent and then decodes to pixels \citep{rombach2022ldm}. Their practical rankings may therefore depend on whether fidelity, distribution coverage, latency, or memory is most important.
 
-Our central question is: \emph{how do these three systems trade generation quality against computational efficiency, and does the ranking transfer from a simple grayscale dataset to a smaller, imbalanced color dataset?} We address this question using a unified 32$\times$32 RGB interface, a frozen task-specific evaluator, 5,000 generated samples per trained model, and five independent optimization seeds. The comparison extends beyond visual inspection by reporting distribution metrics, recognizability, class balance, feature diversity, sharpness, model size, wall-clock cost, and run-to-run variation.
+This project asks two questions: (1) how do the three complete systems trade distribution quality against computational efficiency, and (2) does their ranking transfer from a balanced grayscale benchmark to a smaller, imbalanced photographic dataset? We use a common $32\times32$ RGB interface, 5,000 generated samples per trained model, five independent seeds, and a frozen task-specific evaluator. Hyperparameters are chosen using training-derived validation data only. The study is a system-level comparison, not a parameter- or FLOP-matched causal test of objectives.
 
-The main contributions are:
-\begin{itemize}
-  \item a shared benchmark of VAE, pixel DDPM, and LDM systems on Fashion-MNIST and a 15-class color apparel subset;
-  \item validation-only hyperparameter selection and a stronger residual evaluator whose official test performance is disclosed;
-  \item a five-seed protocol comprising 30 generative training runs, with mean and sample standard deviation reported for every principal result; and
-  \item an explicit quality--compute analysis that includes batched sampling throughput, training time, parameters, and peak allocated GPU memory.
-\end{itemize}
-
-\section{Background and Problem Formulation}
-Let $x\sim p_{\mathrm{data}}(x)$ denote a 32$\times$32 RGB apparel image. The goal is to learn a model distribution $p_\theta(x)$ whose samples are visually plausible and whose distribution is close to the held-out data distribution.
-
-\subsection{Variational autoencoder}
-The VAE encoder predicts a diagonal Gaussian posterior
+\section{Preliminaries and Problem Formulation}
+Let $x\sim p_{\mathrm{data}}(x)$ be an apparel image. We assume the standard VAE and diffusion formulations and state only the objectives needed to define the comparison. The VAE minimizes
 \begin{equation}
-q_\phi(z\mid x)=\mathcal{N}\!\left(z;\mu_\phi(x),\operatorname{diag}(\sigma_\phi^2(x))\right).
+\mathcal{L}_{\mathrm{VAE}}=-\mathbb{E}_{q_\phi(z\mid x)}[\log p_\theta(x\mid z)]+\beta D_{\mathrm{KL}}(q_\phi(z\mid x)\|\mathcal{N}(0,I)).
 \end{equation}
-Using the reparameterization $z=\mu_\phi(x)+\sigma_\phi(x)\odot\epsilon$, $\epsilon\sim\mathcal{N}(0,I)$, the model minimizes the negative evidence lower bound
+Both diffusion systems use the cosine forward process \citep{nichol2021improved} and noise-prediction objective
 \begin{equation}
-\mathcal{L}_{\mathrm{VAE}}=
--\mathbb{E}_{q_\phi(z\mid x)}[\log p_\theta(x\mid z)]
-+\beta D_{\mathrm{KL}}\!\left(q_\phi(z\mid x)\,\|\,\mathcal{N}(0,I)\right).
+x_t=\sqrt{\bar\alpha_t}x_0+\sqrt{1-\bar\alpha_t}\epsilon,
+\qquad
+\mathcal{L}_{\mathrm{simple}}=\mathbb{E}\|\epsilon-\epsilon_\theta(x_t,t)\|_2^2.
 \end{equation}
-The KL term makes prior sampling possible but can remove fine detail when regularization and compression dominate reconstruction.
+Pixel DDPM applies the objective to $3\times32\times32$ images; LDM applies it to standardized $4\times8\times8$ latents and decodes only after denoising. Thus, LDM reduces each diffusion step from 1,024 to 64 spatial positions, while VAE removes iterative sampling entirely. We evaluate how these structural choices affect fidelity, semantic coverage, and measured resource cost on held-out data.
 
-\subsection{Pixel-space diffusion}
-For the DDPM, the forward process corrupts a clean image at timestep $t$:
-\begin{equation}
-x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon,
-\qquad \epsilon\sim\mathcal{N}(0,I).
-\end{equation}
-A time-conditioned U-Net $\epsilon_\theta(x_t,t)$ is trained by noise-prediction mean-squared error,
-\begin{equation}
-\mathcal{L}_{\mathrm{simple}}=
-\mathbb{E}_{x_0,t,\epsilon}\left[\|\epsilon-\epsilon_\theta(x_t,t)\|_2^2\right].
-\end{equation}
-We adopt the cosine cumulative noise schedule motivated by improved DDPMs \citep{nichol2021improved}. Sampling follows 100 ancestral reverse steps in pixel space.
+\section{Design}
+\subsection{Datasets and controlled interface}
+Fashion-MNIST provides 60,000 training and 10,000 test images in ten balanced classes \citep{xiao2017fashion}. Images are resized from $28\times28$ to $32\times32$ and replicated to RGB. The second dataset is Fashion Product Images Small \citep{fpis}. We retain the 15 most frequent Apparel article types and form a deterministic stratified 85/15 split: 8,007 training and 1,423 test photographs. Images are center-padded to a square before resizing, preserving aspect ratio. This set introduces natural class imbalance, color, texture, pose, and background variation.
 
-\subsection{Latent diffusion}
-The LDM applies the same noise-prediction objective to a spatial VAE representation rather than directly to $x$. If $E$ and $D$ are the pretrained encoder and decoder, respectively, we compute $z=E(x)$, standardize every latent channel over the training set, learn the reverse process in the resulting 4$\times$8$\times$8 space, and decode $D(z_0)$. This reduces the denoiser's spatial workload by a factor of 16 and its scalar representation from 3,072 pixels to 256 latent values, while retaining spatial structure. Consistent latent scaling is important because it controls the effective diffusion signal-to-noise ratio \citep{rombach2022ldm}.
+\subsection{Models and task-specific evaluator}
+The spatial VAE uses residual convolutional blocks, GroupNorm, SiLU, two downsampling stages, a $4\times8\times8$ Gaussian latent, and symmetric nearest-neighbor upsampling. Pixel DDPM and LDM use two-resolution time-conditioned U-Nets with sinusoidal embeddings, residual blocks, skip connections, bottleneck self-attention, and EMA weights. Figure~\ref{fig:architecture} compares their generation paths. The frozen evaluator has 64/128/256-channel residual stages and a 256-dimensional feature vector, following the optimization motivation of residual learning \citep{he2016resnet}.
 
-\section{Datasets and Preprocessing}
-Fashion-MNIST contains 60,000 training and 10,000 test images across ten balanced clothing categories \citep{xiao2017fashion}. Images are resized from 28$\times$28 to 32$\times$32 and the grayscale channel is replicated three times. This keeps the underlying dataset unchanged while matching the RGB interface used by every model.
-
-The second domain is derived from Fashion Product Images Small \citep{fpis}. We retain records whose master category is Apparel, select the 15 most frequent article types, and use a fixed seed to create a class-stratified 85/15 split. The resulting split contains 8,007 training and 1,423 test photographs. Each RGB image is center-padded to a square with a white background before antialiased resizing, avoiding the aspect-ratio distortion caused by direct stretching. The selected labels are T-shirts, shirts, kurtas, tops, briefs, jeans, trousers, shorts, bras, dresses, sarees, track pants, sweaters, sweatshirts, and jackets. The class frequencies are naturally imbalanced; therefore overall accuracy, balanced accuracy, per-class recall, entropy, and class-distribution divergence are all reported.
-
-\begin{figure}[t]
+\begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{figures/model_architectures.png}
-  \caption{Sampling paths of the three systems. The LDM reuses the trained VAE decoder and performs its sequential denoising in a 4$\times$8$\times$8 spatial latent rather than 3$\times$32$\times$32 pixel space.}
-  \label{fig:architectures}
+  \includegraphics[width=0.90\linewidth]{figures/model_architectures.png}
+  \caption{Sampling paths. VAE decodes once; DDPM denoises pixels for 100 steps; LDM denoises a spatial latent for 100 steps and then decodes.}
+  \label{fig:architecture}
 \end{figure}
 
-\section{Model and Training Design}
-\subsection{Shared optimization controls}
-Every generative model uses training batch size 256, AdamW \citep{loshchilov2019adamw}, weight decay $10^{-4}$, gradient-norm clipping at 1.0, 200-step linear learning-rate warm-up, and cosine decay to 10\% of the initial rate \citep{loshchilov2017sgdr}. BF16 automatic mixed precision, pinned-memory loaders, four persistent workers, prefetching, and cuDNN benchmarking are enabled on the RTX 5070 Ti. Diffusion inference also uses BF16 and a 4,096-image batch chosen by a local throughput/VRAM probe. A fixed number of optimizer updates is used instead of nominal epochs because the two datasets differ substantially in size; this avoids giving the smaller color dataset drastically fewer parameter updates.
+\section{Methodology}
+\subsection{Optimization and sampling budgets}
+All generators use AdamW \citep{loshchilov2019adamw}, batch size 256, weight decay $10^{-4}$, gradient clipping at 1.0, 200-step linear warm-up, and cosine learning-rate decay \citep{loshchilov2017sgdr}. The VAE uses $\beta=1$, learning rate $10^{-3}$, and 3,000 updates. Each diffusion denoiser uses learning rate $2\times10^{-4}$, 5,000 updates, and 100 ancestral reverse steps. DDPM uses EMA 0.995 and predicted-clean clipping to $[-1,1]$; LDM uses width 64, EMA 0.999, exact-posterior sampling, and clips standardized predicted-clean latents to $[-3,3]$. LDM training and parameter totals include its VAE.
 
-\subsection{Spatial VAE}
-The VAE uses residual convolutional blocks with GroupNorm and SiLU activations. Two stride-2 encoder stages map 3$\times$32$\times$32 images to Gaussian moments of shape 4$\times$8$\times$8. A symmetric nearest-neighbor upsampling decoder avoids checkerboard artifacts associated with poorly configured transposed convolutions. Binary reconstruction loss is summed over pixels and averaged over the batch. The selected $\beta=1$ is linearly warmed up over 200 steps to reduce early posterior collapse. The VAE is trained for 3,000 updates at learning rate $10^{-3}$.
+Fixed update counts prevent the smaller color dataset from receiving a much smaller optimization budget merely because it contains fewer images; they do not equalize effective epochs. The common 100-step reverse budget isolates the effect of denoising representation while remaining computationally feasible. Per-channel latent standardization fixes the LDM signal scale presented to the cosine process; the $4\times8\times8$ representation has 12 times fewer scalars and 16 times fewer spatial positions than the pixel tensor.
 
-\subsection{Pixel DDPM}
-The pixel denoiser is a two-resolution U-Net with residual time-conditioned blocks, sinusoidal timestep embeddings, long skip connections, and four-head bottleneck self-attention. The base width is 64 channels. Training lasts 5,000 updates at learning rate $2\times10^{-4}$. Sampling uses an EMA of the parameters with decay 0.995, exact posterior variance, and clips the predicted clean image to $[-1,1]$ before every posterior update. Inputs are mapped from $[0,1]$ to $[-1,1]$ before noising and mapped back to $[0,1]$ after sampling.
+\subsection{Validation-only selection}
+Classifier settings are selected on fixed stratified 90/10 splits of each training set by the mean of accuracy and balanced accuracy. Generator learning-rate, KL-weight, and EMA candidates are selected on a balanced 1,000-image subset held out from Fashion-MNIST training. Full-budget validation then selects diffusion width, exact-posterior sampling, and predicted-clean clipping. These choices are material: the selected LDM configuration reduces held-out FID from 174.2 to 58.8 and restores sampled-latent SD from 13.3 to 0.842; exact-posterior sampling and image clipping reduce DDPM validation FID from 68.86 to 34.04. No official test image participates in selection. Appendix~\ref{app:tuning} contains the complete search and stabilization evidence. The bounded search identifies the best tested settings rather than a global optimum \citep{bergstra2012random}.
 
-\subsection{Latent diffusion}
-The latent denoiser uses the same U-Net design with base width 64 and four input/output channels. The VAE is first trained as above; its posterior mean is then standardized per latent channel. The denoiser is trained for 5,000 updates at $2\times10^{-4}$ with EMA decay 0.999. Sampling uses exact posterior variance and clips the predicted clean standardized latent to $[-3,3]$ before every posterior update. The reported LDM training cost includes both VAE and latent-denoiser training, and its parameter count includes the VAE and denoiser, because both components are required to generate an image. Sampling cost includes all 100 latent reverse steps and the final decoder pass.
+\subsection{Evaluation protocol}
+The evaluator is trained only on real training images and frozen before generator evaluation. For each model--dataset--seed combination, we evaluate 5,000 generated samples against the same held-out real set. Feature FID compares Gaussian feature moments \citep{heusel2017fid}; KID is an unbiased polynomial-kernel MMD estimator \citep{binkowski2018kid}. Both use the evaluator's apparel features, so their absolute values are not ImageNet FID/KID and are comparable only within a dataset. We additionally measure confidence, confidence-$\geq0.8$ recognizability, classifier-based Inception Score (cIS), predicted-class coverage, normalized class entropy, JSD from the real predicted-class distribution, pairwise feature distance, Sobel gradient magnitude, training time, batched sampling time, parameters, and peak allocated CUDA memory. No single metric is treated as sufficient because all feature and label diagnostics inherit evaluator behavior \citep{stein2023flaws}. Results are descriptive mean$\pm$sample SD over five independently trained seeds, rather than significance claims from a large-sample study.
 
-\begin{table}[t]
-\caption{Definitive generative configuration. Settings were frozen before the official test evaluation.}
-\label{tab:configuration}
+\section{Numerical Experiments}
+\subsection{Implementation and evaluator reliability}
+Experiments run in PyTorch 2.11 with CUDA 12.8 on an RTX 5070 Ti. Native BF16, pinned-memory loaders, persistent workers, cuDNN benchmarking, and a 4,096-image diffusion sampling batch improve throughput. Exact-shape warm-ups and CUDA synchronization isolate steady-state timing. Every central value is a mean over seeds 0--4 and uncertainty is sample standard deviation.
+
+The final Fashion-MNIST evaluator achieves 94.23\% accuracy and balanced accuracy; Shirt is the hardest class at 79.90\% recall. The color evaluator achieves 88.05\% accuracy but 77.40\% balanced accuracy, a 10.65-point gap; rare Sweaters, Jackets, and Sweatshirts have only 31.82\%, 40.00\%, and 45.45\% recall. Class weighting raises minimum validation recall from 25.00\% to 41.67\% but lowers the predefined combined selection score from 84.81\% to 84.60\%, so the unweighted evaluator is retained and both accuracy measures are disclosed. Generated-label metrics on the color set are therefore evaluator-relative rather than ground truth. Appendix~\ref{app:evaluator} reports the confusion matrices, per-class recall, and test-set imbalance.
+
+\subsection{Distribution fidelity}
+
+\begin{figure}[H]
 \centering
-\small
-\begin{tabular}{lrrr}
-\toprule
-Setting & VAE & Pixel DDPM & LDM \\
-\midrule
-Representation & 4$\times$8$\times$8 & 3$\times$32$\times$32 & 4$\times$8$\times$8 \\
-Optimizer updates & 3,000 & 5,000 & 3,000 + 5,000 \\
-Learning rate & $10^{-3}$ & $2\times10^{-4}$ & $10^{-3}$ + $2\times10^{-4}$ \\
-KL weight $\beta$ & 1.0 & -- & 1.0 for autoencoder \\
-EMA decay & -- & 0.995 & 0.999 \\
-Predicted-clean clipping & -- & $[-1,1]$ & $[-3,3]$ standardized \\
-Reverse steps & -- & 100 & 100 \\
-Training / sampling batch & 256 / 5,000 & 256 / 4,096 & 256 / 4,096 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\section{Evaluator and Hyperparameter Protocol}
-\subsection{Frozen residual evaluator}
-The evaluator is independent of all three generative models. It consists of three 64/128/256-channel residual stages and global average pooling, yielding a 256-dimensional feature before the classification layer. Residual connections are used to support deeper, trainable feature extractors \citep{he2016resnet}. A random horizontal flip is the only augmentation. Both evaluators are trained for 40 epochs with batch size 256, AdamW, and cosine decay. The selected learning rates are $3\times10^{-4}$ for Fashion-MNIST and $10^{-3}$ for the color dataset.
-
-Four classifier configurations were compared on fixed stratified 90/10 splits of each training set. Selection maximized the mean of validation accuracy and validation balanced accuracy; the official test sets were not consulted. A square-root inverse-frequency loss was included as a class-imbalance ablation, motivated by class-balanced learning \citep{cui2019classbalanced}, but was not selected by the predefined score. Final evaluators are retrained on the complete training splits and then frozen. Table~\ref{tab:classifiers} and the confusion diagnostics expose their strengths and failure modes.
-
-\begin{table}[t]
-\caption{Frozen evaluator performance on the official test splits.}
-\label{tab:classifiers}
-\centering
-\small
-\resizebox{\linewidth}{!}{\input{tables/classifier_results.tex}}
-\end{table}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{figures/classifier_confusion_matrices.png}
-  \caption{Row-normalized confusion matrices of the frozen feature evaluators. Generative metrics inherit the evaluator's residual classification errors, especially for rare or visually overlapping product categories.}
-  \label{fig:classifier-confusion}
-\end{figure}
-
-\subsection{Bounded generator search}
-A small, reproducible search compares three VAE settings and four learning-rate/EMA combinations for each diffusion family. It uses seed 1508 and a class-balanced 1,000-image subset held out from Fashion-MNIST training; no official test image participates. The VAE pilot uses 1,500 updates, diffusion pilots use 2,000 updates, and candidates are ranked by task-feature FID. Random or bounded search is generally more efficient than exhaustive grid refinement when only a few hyperparameters dominate performance \citep{bergstra2012random}. The selected settings are transferred unchanged to the color dataset, preventing dataset-specific test tuning. Pilot scores are used only for selection; because short diffusion runs are not converged, they are not presented as definitive quality results.
-
-\begin{figure}[t]
-\centering
-\begin{minipage}{0.49\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/classifier_hyperparameter_search.png}
-  \small (a) Classifier validation search
-\end{minipage}
-\hfill
-\begin{minipage}{0.49\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/generator_hyperparameter_search.png}
-  \small (b) Generator validation pilot
-\end{minipage}
-\caption{Hyperparameter evidence used before the definitive five-seed experiment.}
-\label{fig:hyperparameters}
-\end{figure}
-
-A subsequent full-size validation diagnostic showed that the base-32 LDM's sampled standardized latents had implausibly large scale. We therefore compared base widths 32/64, fixed-large/exact-posterior/DDIM reverse updates, and clean-latent clipping thresholds. The selected LDM uses base width 64, exact posterior variance, and clips the predicted clean standardized latent to $[-3,3]$ before every posterior update. This reduces validation latent standard deviation from 13.3 without clipping to 0.842, restores all ten validation classes, and reduces validation feature FID from 174.2 to 58.8. An equivalent validation-only sampler comparison is performed for pixel DDPM rather than assuming the same stabilization is optimal in pixel space.
-
-\begin{figure}[t]
-\centering
-\begin{minipage}{0.32\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/ldm_capacity_sampler_diagnostic.png}
-  \small (a) LDM width and sampler
-\end{minipage}
-\hfill
-\begin{minipage}{0.32\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/ldm_clipping_search.png}
-  \small (b) LDM clean-latent clipping
-\end{minipage}
-\hfill
-\begin{minipage}{0.32\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/ddpm_sampler_search.png}
-  \small (c) Pixel-DDPM reverse sampler
-\end{minipage}
-\caption{Validation-only diagnostics used to stabilize the two diffusion systems before the definitive benchmark.}
-\label{fig:diffusion-diagnostics}
-\end{figure}
-
-\section{Evaluation Metrics}
-For each model--dataset--seed combination, 5,000 generated samples are evaluated. Fashion-MNIST uses 5,000 held-out real references; the smaller color dataset uses its complete 1,423-image test split. KID compares repeated equal-size 1,000-image subsets, while FID uses all available features in each set. Before every timed sampling pass, one untimed forward is run at each exact batch shape so cuDNN algorithm selection and kernel compilation do not affect seed 0 alone. Training still performs all configured optimizer updates, but wall-clock training excludes the first update, which serves the equivalent kernel warm-up purpose. CUDA is synchronized at every timing boundary.
-
-\textbf{Distribution similarity.} FID compares the first two moments of real and generated feature distributions \citep{heusel2017fid}; KID is an unbiased polynomial-kernel maximum mean discrepancy estimator \citep{binkowski2018kid}. We compute both in the frozen classifier's 256-dimensional apparel feature space, not in ImageNet Inception space. We therefore call them \emph{feature FID} and \emph{feature KID}; absolute scores cannot be compared with published ImageNet FID. Metric sensitivity to feature extractors and sample treatment is a known limitation of generative evaluation \citep{stein2023flaws}.
-
-\textbf{Recognizability and diversity.} We report mean and median evaluator confidence, the fraction with confidence at least 0.8, predicted-class coverage, normalized class entropy, Jensen--Shannon divergence (JSD) from the real predicted-class distribution, an Inception-style score, and mean pairwise feature distance. Coverage alone can hide strong mode imbalance; entropy and JSD make that failure visible.
-
-\textbf{Structure and compute.} A true Sobel gradient-magnitude score provides a supporting edge diagnostic. Efficiency measurements include trainable parameters, peak allocated CUDA memory, measured training time, total sampling time, and amortized milliseconds per image at the specified large sampling batches. The latter is a throughput measurement, not single-request interactive latency. Timing is hardware- and implementation-dependent and should be interpreted on the reported RTX 5070 Ti environment.
-
-\section{Numerical Results}
-All central values below are means over seeds 0--4; uncertainty is the sample standard deviation. The test references and evaluator are fixed for all seeds within a dataset, while model initialization, data order, and stochastic training noise change with the seed.
-
-\subsection{Evaluator reliability}
-The Fashion-MNIST evaluator reaches 94.23\% test accuracy and 94.23\% balanced accuracy; its lowest per-class recall is 79.90\% for Shirt. This performance supports its use as a task-specific feature extractor while still exposing the known overlap between shirt-like categories. The color evaluator reaches 88.05\% overall accuracy but only 77.40\% balanced accuracy. Its weakest classes are Sweaters, Jackets, and Sweatshirts, with recalls of 31.82\%, 40.00\%, and 45.45\%, respectively. The 10.65-point gap between overall and balanced accuracy confirms that dominant categories drive part of the apparently strong aggregate score. Table~\ref{tab:classifiers}, Figure~\ref{fig:classifier-confusion}, and Figure~\ref{fig:classifier-recall} are therefore considered before interpreting feature metrics or predicted class proportions, especially for the imbalanced color set.
-
-\subsection{Distribution quality, recognizability, and diversity}
-\begin{table}[t]
-\caption{Five-seed generation-quality results. Feature metrics are valid for comparisons within each dataset only.}
-\label{tab:quality}
-\centering
-\scriptsize
-\resizebox{\linewidth}{!}{\input{tables/quality_results.tex}}
-\end{table}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{figures/distribution_quality.png}
-  \caption{Feature FID and KID (mean $\pm$ sample standard deviation over five seeds). Lower is better.}
-  \label{fig:distribution-quality}
-\end{figure}
-
-The principal distribution results are summarized in Table~\ref{tab:quality} and Figure~\ref{fig:distribution-quality}. On Fashion-MNIST, DDPM obtains feature FID $29.64\pm1.49$ and KID $0.349\pm0.019$, followed by LDM at $52.01\pm0.71$ and $0.687\pm0.015$, then VAE at $119.10\pm2.87$ and $1.113\pm0.021$. DDPM therefore reduces FID by 75.1\% and KID by 68.7\% relative to VAE, and reduces FID by 43.0\% relative to LDM. The ordering is identical on the color products: DDPM achieves FID $16.67\pm0.85$ and KID $0.208\pm0.016$, LDM $33.65\pm2.21$ and $0.429\pm0.045$, and VAE $83.88\pm3.80$ and $0.940\pm0.049$. Here DDPM reduces FID by 80.1\% relative to VAE and 50.5\% relative to LDM. Absolute scores are not compared across datasets because each uses a separately trained feature extractor and a different number of real references.
-
-The auxiliary metrics reveal a different ranking. On Fashion-MNIST, LDM has the highest mean confidence ($0.951\pm0.002$) and high-confidence recognizability ($0.899\pm0.006$), exceeding DDPM's $0.928\pm0.002$ and $0.853\pm0.007$. The same occurs on color products: LDM reaches $0.896\pm0.007$ confidence and $0.790\pm0.015$ recognizability, versus DDPM's $0.879\pm0.003$ and $0.756\pm0.007$. However, DDPM matches real class proportions more closely: its JSD is $0.015\pm0.002$ versus LDM's $0.025\pm0.002$ on Fashion-MNIST, and $0.006\pm0.001$ versus $0.027\pm0.003$ on color products. VAE has the lowest entropy and highest JSD on both datasets. All systems attain 10/10 or 15/15 class coverage, demonstrating why coverage alone is insufficient to detect mode preference. FID and KID are interpreted jointly because FID is a biased plug-in estimate whereas KID is unbiased at finite sample sizes.
-
-\begin{figure}[t]
-\centering
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.47\linewidth}
   \centering
   \includegraphics[width=\linewidth]{figures/qualitative_fashion_mnist.png}
   \small (a) Fashion-MNIST
 \end{minipage}
 \hfill
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.47\linewidth}
   \centering
   \includegraphics[width=\linewidth]{figures/qualitative_fashion_product_images.png}
-  \small (b) Color product images
+  \small (b) Color products
 \end{minipage}
-\caption{Representative real and generated grids from seed 0. Quantitative conclusions use all five seeds; the grids expose blur, artifacts, mode preference, and color consistency that scalar metrics may miss.}
+\caption{Representative real and generated grids from seed 0. Quantitative conclusions use all five seeds.}
 \label{fig:qualitative}
 \end{figure}
 
-\begin{figure}[t]
+\begin{table}[H]
+\caption{Generation quality, mean $\pm$ sample SD over five seeds. Lower FID, KID, and JSD are better; higher confidence and recognizability are better.}
+\label{tab:quality}
+\centering
+\scriptsize
+\begin{tabular}{llrrrrr}
+\toprule
+Dataset & Model & FID $\downarrow$ & KID $\downarrow$ & Confidence $\uparrow$ & Recog. $\uparrow$ & JSD $\downarrow$ \\
+\midrule
+Fashion-MNIST & VAE  & $119.10\pm2.87$ & $1.113\pm.021$ & $.794\pm.004$ & $.573\pm.010$ & $.077\pm.005$ \\
+ & DDPM & $29.64\pm1.49$ & $.349\pm.019$ & $.928\pm.002$ & $.853\pm.007$ & $.015\pm.002$ \\
+ & LDM  & $52.01\pm.71$ & $.687\pm.015$ & $.951\pm.002$ & $.899\pm.006$ & $.025\pm.002$ \\
+\midrule
+Color products & VAE  & $83.88\pm3.80$ & $.940\pm.049$ & $.790\pm.006$ & $.572\pm.012$ & $.061\pm.007$ \\
+ & DDPM & $16.67\pm.85$ & $.208\pm.016$ & $.879\pm.003$ & $.756\pm.007$ & $.006\pm.001$ \\
+ & LDM  & $33.65\pm2.21$ & $.429\pm.045$ & $.896\pm.007$ & $.790\pm.015$ & $.027\pm.003$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:qualitative} and Table~\ref{tab:quality} show the same distribution-fidelity ordering on both datasets. DDPM reduces VAE FID by 75.1\% on Fashion-MNIST and 80.1\% on color products; it reduces LDM FID by 43.0\% and 50.5\%. KID corroborates rather than reverses this result: relative to VAE, DDPM lowers KID by 68.7\% and 77.9\%. Its JSD reductions are 80.2\% and 89.8\%, showing that its advantage extends from feature moments to class-proportion agreement.
+
+The ordering is not caused by one favorable initialization. Fashion-MNIST FID ranges are 28.13--31.39 (DDPM), 50.79--52.60 (LDM), and 116.19--122.62 (VAE); the corresponding color ranges are 15.46--17.78, 32.25--37.54, and 79.21--89.73. Thus, the best and worst seed intervals do not overlap, and every model--dataset FID coefficient of variation is below 6.6\%. Absolute values must not be compared across datasets because each uses a different evaluator and the color test set has fewer real references.
+
+\subsection{Recognizability, diversity, and sharpness}
+LDM has the highest confidence and recognizability: it exceeds DDPM recognizability by 4.62 percentage points on Fashion-MNIST and 3.46 points on color products. Its smoother, classifier-friendly images therefore look semantically decisive even though DDPM better matches the complete real distribution. All systems cover all 10 or 15 evaluator-predicted classes in every seed, so coverage alone fails to distinguish them.
+
+\begin{table}[H]
+\caption{Supporting sample statistics, mean $\pm$ sample SD. cIS is classifier-based Inception Score; feature distance is the mean pairwise distance in evaluator space. Higher values are not unconditionally better.}
+\label{tab:supporting}
+\centering
+\scriptsize
+\begin{tabular}{llrrrr}
+\toprule
+Dataset & Model & Entropy & cIS & Feature distance & Sobel sharpness \\
+\midrule
+Fashion-MNIST & VAE  & $.868\pm.008$ & $4.293\pm.100$ & $13.005\pm.143$ & $.546\pm.008$ \\
+ & DDPM & $.973\pm.004$ & $7.785\pm.088$ & $19.595\pm.042$ & $.608\pm.009$ \\
+ & LDM  & $.960\pm.003$ & $8.079\pm.049$ & $20.480\pm.112$ & $.507\pm.011$ \\
+\midrule
+Color products & VAE  & $.644\pm.019$ & $3.405\pm.104$ & $13.812\pm.131$ & $.767\pm.003$ \\
+ & DDPM & $.728\pm.010$ & $5.283\pm.091$ & $18.356\pm.103$ & $.827\pm.002$ \\
+ & LDM  & $.734\pm.008$ & $5.637\pm.070$ & $18.984\pm.181$ & $.782\pm.002$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:supporting} explains the metric disagreement. LDM leads cIS and pairwise feature distance on both datasets, consistent with confident, well-separated semantic samples, but DDPM leads FID, KID, and JSD. On the imbalanced color set, LDM has slightly higher normalized entropy than DDPM ($.734$ versus $.728$) yet over four times its JSD ($.0268$ versus $.0062$): uniformity is not the target when the real distribution is nonuniform. DDPM also has the highest Sobel magnitude on both datasets. The low Fashion-MNIST LDM value ($.507$) supports visible decoder smoothing, whereas the higher color-domain values partly reflect photographic edges and backgrounds rather than garment fidelity. Five-seed class distributions are shown in Appendix~\ref{app:diagnostics}.
+
+\subsection{Efficiency and stability}
+
+\begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{figures/class_distributions.png}
-  \caption{Predicted class proportions averaged over five seeds. Agreement with the real evaluator distribution is more informative than class coverage alone.}
-  \label{fig:class-distributions}
+  \includegraphics[width=0.70\linewidth]{figures/quality_compute_tradeoff.png}
+  \caption{Feature FID versus amortized batched sampling time. Bars show sample SD over five seeds; the horizontal axis is logarithmic.}
+  \label{fig:tradeoff}
 \end{figure}
 
-\subsection{Computational cost}
-\begin{table}[t]
-\caption{Five-seed computational results on one RTX 5070 Ti. LDM training and parameter totals include its VAE.}
+The quality--compute frontier in Figure~\ref{fig:tradeoff} is substantial. Across datasets, VAE requires 1.61--1.66 minutes to train and 0.036 ms/image to sample; LDM requires 3.48--3.78 minutes and 0.763--0.765 ms/image; DDPM requires 5.55--5.62 minutes and 10.611--10.624 ms/image. LDM is 13.9 times faster than DDPM and reduces its end-to-end training time by 33--37\%; VAE is about 292 times faster than DDPM and 21 times faster than LDM. These batched rates correspond approximately to 27,600, 1,310, and 94 images/s for VAE, LDM, and DDPM, not single-request latency.
+
+Complete-system parameter counts are 1.955M, 7.743M, and 5.787M for VAE, LDM, and DDPM. Despite having 33.8\% more parameters than DDPM because its total includes the autoencoder, LDM has 32\% lower measured peak memory: 5.20--5.21 GB versus 7.68--7.70 GB. VAE peaks at 6.30--6.32 GB. This inversion shows that the 4,096-sample activation geometry, rather than weights alone, dominates high-throughput inference memory. All 30 runs have finite losses and no detected collapse. Appendix~\ref{app:diagnostics} provides convergence, per-seed FID, and separate training/sampling memory plots.
+
+\begin{table}[H]
+\caption{Computational results, mean $\pm$ sample SD over five seeds. LDM totals include its VAE; sampling is batched throughput.}
 \label{tab:compute}
 \centering
 \scriptsize
 \resizebox{\linewidth}{!}{\input{tables/compute_results.tex}}
 \end{table}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{figures/compute_cost.png}
-  \caption{Measured training time, batched sampling time per image, and peak allocated GPU memory (mean $\pm$ standard deviation).}
-  \label{fig:compute}
-\end{figure}
-
-The VAE requires a single decoder evaluation per generated batch, whereas both diffusion systems require 100 dependent denoiser calls. Across the two datasets, VAE samples in $0.0362$--$0.0364$ ms/image, LDM in $0.763$--$0.765$ ms/image, and DDPM in $10.611$--$10.624$ ms/image. Thus LDM is approximately 13.9 times faster than pixel DDPM, while VAE is approximately 292 times faster than DDPM under the tested high-throughput batches. These ratios should not be read as single-image response-time ratios.
-
-The corresponding Fashion-MNIST training times are $1.61\pm0.00$, $3.48\pm0.05$, and $5.55\pm0.00$ minutes for VAE, LDM, and DDPM; color-product times are $1.66\pm0.00$, $3.78\pm0.01$, and $5.62\pm0.01$ minutes. LDM's total includes its VAE yet remains 32--37\% shorter than pixel-DDPM training because its denoiser operates on 64 spatial positions rather than 1,024. Complete-system parameter counts are 1.955M (VAE), 5.787M (DDPM), and 7.743M (LDM). Despite the largest parameter count, LDM has the lowest system peak among the tested batches (approximately 5.20 GB), compared with 6.30--6.32 GB for VAE and 7.68--7.70 GB for DDPM; the large VAE generation batch and diffusion sampling tensors dominate these peaks. Table~\ref{tab:compute} and Figure~\ref{fig:tradeoff} therefore expose a genuine quality--throughput--memory trade-off rather than a single efficiency ordering.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.92\linewidth]{figures/quality_compute_tradeoff.png}
-  \caption{Feature FID versus amortized batched sampling time per image. Both axes summarize five seeds; horizontal and vertical bars show sample standard deviations.}
-  \label{fig:tradeoff}
-\end{figure}
-
-\subsection{Convergence and seed sensitivity}
-Training curves are averaged at matching optimizer updates, with shaded one-standard-deviation bands. VAE ELBO and diffusion noise MSE are not numerically comparable because they optimize different objectives. Every one of the 30 runs records zero non-finite losses. Mean late-training coefficients of variation range from 0.016 to 0.099 across the six model--dataset groups, and no seed-level FID indicates a collapsed run. Fashion-MNIST FID standard deviations are 2.87, 1.49, and 0.71 for VAE, DDPM, and LDM; color-set deviations are 3.80, 0.85, and 2.21. The DDPM $<$ LDM $<$ VAE FID ordering holds for every seed on both datasets. Figure~\ref{fig:seeds} reports each seed directly rather than allowing an average to hide a failed or unusually favorable run.
-
-\begin{figure}[t]
-\centering
-\begin{minipage}{0.58\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/training_curves.png}
-  \small (a) Mean training curves with one-SD bands
-\end{minipage}
-\hfill
-\begin{minipage}{0.39\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/seed_variability.png}
-  \small (b) Seed-level feature FID
-\end{minipage}
-\caption{Optimization convergence and run-to-run variability.}
-\label{fig:seeds}
-\end{figure}
-
 \section{Discussion}
-The same distribution-quality ordering transfers across a balanced silhouette dataset and a smaller, imbalanced photographic dataset: DDPM leads, LDM is intermediate, and VAE trails. This agreement across every seed is stronger evidence than a favorable single run. The scale of the gaps is also practically substantial: DDPM cuts VAE FID by 75--80\%, while LDM cuts it by 56--60\%. Qualitative grids support this result. VAE outputs are frequently blurred or structurally ambiguous; DDPM preserves more texture, pose, and garment variation; LDM outputs are smooth and highly recognizable but repeat common silhouettes and dominant color-product categories more often.
+\subsection{Model-selection implications}
+DDPM is preferred when distribution fidelity and class-proportion agreement dominate: it leads FID, KID, and JSD in every seed. LDM is the best compromise when pixel diffusion is too expensive; it accepts 43--50\% higher FID than DDPM but removes 92.8\% of diffusion sampling time and leads recognizability and cIS. This disagreement shows that individually clear samples can still misrepresent global feature and class statistics. VAE is appropriate when speed and model size dominate, at a substantial fidelity cost. Because optimizer settings were selected on Fashion-MNIST and transferred unchanged, the persistent color-domain ranking demonstrates robustness without test-set tuning, not color-domain optimality.
 
-The metrics do not produce a universal ranking. LDM has the highest classifier confidence, recognizability, and Inception-style score on both datasets, yet DDPM has substantially lower FID, KID, and class JSD. The LDM decoder removes some pixel-level noise and yields classifier-friendly prototypes, but its compressed 4$\times$8$\times$8 representation and stabilized latent range can suppress within-class detail and favor common modes. High confidence therefore measures semantic clarity, not distributional fidelity. The VAE provides the opposite extreme: its one-pass sampler is unmatched for throughput, but KL regularization and direct prior sampling yield the lowest confidence, feature spread, and class-proportion fidelity.
+\subsection{Robustness and limitations}
+The systems are neither parameter- nor FLOP-matched, so conclusions concern complete implementations rather than objectives in isolation. Fixed updates also expose the 8,007-image color set more often than Fashion-MNIST. Its 1,423-reference test set and imperfect evaluator add uncertainty, while FID, KID, cIS, confidence, and feature distance reuse the same features; cross-dataset values are therefore not comparable. Timings measure RTX 5070 Ti throughput at large batch size, not interactive latency. Finally, the common 100-step ancestral sampler controls reverse depth but may miss each diffusion model's best frontier. Priority follow-ups are equal-compute comparisons, independent feature spaces, real-reference bootstrapping, and step-count/solver ablations.
 
-LDM is the strongest compromise when DDPM quality is desirable but pixel-space sampling cost is unacceptable. It gives up 43--50\% FID relative to DDPM, but reduces diffusion sampling time by about 92.8\% and peak allocated memory by roughly one third. Pixel DDPM is preferable when distribution match and class balance dominate the decision; VAE is preferable when rapid bulk generation or a small model matters more than fidelity. These conclusions describe the measured high-throughput implementation, not single-image service latency.
+\section{Conclusions}
+Across both apparel domains, pixel DDPM gives the closest distribution, LDM the best quality--throughput compromise, and VAE the greatest speed and compactness. The stable five-seed ranking defines a use-dependent frontier; recognizability and feature fidelity can diverge. Future work should match compute, test faster samplers, strengthen the latent objective, and use independent features.
 
-The experiment is intentionally a comparison of three complete systems. The models are neither parameter-matched nor training-FLOP-matched. Consequently, a difference cannot be attributed solely to the probabilistic objective: network width, representation size, number of sequential sampling steps, predicted-clean clipping, and the shared VAE component of the LDM all contribute. This system-level framing is appropriate for practical selection but weaker than a controlled architectural ablation.
-
-The task-specific feature extractor is both a strength and a limitation. It is more relevant to low-resolution apparel than an off-the-shelf ImageNet network, but generator scores inherit its class confusion and any invariances learned during classifier training. This is most consequential for the color set, where 88.05\% overall accuracy coexists with 77.40\% balanced accuracy. The disclosed evaluator scores, confusion matrices, and per-class recall make this dependency auditable; qualitative grids and supporting diagnostics remain necessary.
-
-\section{Limitations and Future Work}
-First, the bounded search cannot establish globally optimal hyperparameters; it identifies the best candidates under a stated compute budget. A broader asynchronous search could explore channel widths, latent channels, KL schedules, diffusion step counts, and learned variance. Second, all final diffusion samples use 100 ancestral steps. DDIM or modern solver-based samplers could reduce latency without retraining. Third, the LDM uses the same VAE objective as the standalone VAE; a perceptual or adversarial autoencoder objective could improve high-frequency reconstruction at the cost of a less controlled comparison. Fourth, the color dataset split is much smaller than Fashion-MNIST, and its 1,423 real references increase uncertainty in covariance-based metrics. Finally, wall-clock cost is specific to the tested software stack and RTX 5070 Ti.
-
-Useful follow-up experiments include parameter-matched denoisers, equal-FLOP training budgets, confidence intervals from bootstrap resampling, precision/recall or density/coverage metrics, conditional generation, and a diffusion-step ablation. A second independent feature extractor would test whether the model ranking is robust to evaluator choice.
-
-\section{Conclusion}
-This project establishes a reproducible, five-seed comparison of a spatial VAE, pixel DDPM, and latent diffusion model across balanced grayscale and imbalanced color apparel domains. Under the frozen protocol, pixel DDPM consistently gives the best distribution match and class-proportion fidelity, with FID $29.64\pm1.49$ and $16.67\pm0.85$. LDM is the practical middle point: its FID is higher at $52.01\pm0.71$ and $33.65\pm2.21$, but it has the highest semantic recognizability and is 13.9 times faster to sample than DDPM. VAE generates approximately 292 times faster than DDPM but has the largest distribution error. The ranking is stable over all seeds, every evaluator-predicted class appears in every model group, and no run contains a non-finite loss. The evidence therefore supports application-specific selection: DDPM for fidelity, LDM for a quality--throughput compromise, and VAE for maximum throughput and minimum parameter count.
-
+\clearpage
 \begin{thebibliography}{99}
 \bibitem{kingma2014vae} D. P. Kingma and M. Welling, ``Auto-Encoding Variational Bayes,'' in \emph{Proc. 2nd Int. Conf. Learning Representations (ICLR)}, 2014. [Online]. Available: \url{https://arxiv.org/abs/1312.6114}
 
@@ -354,43 +225,102 @@ This project establishes a reproducible, five-seed comparison of a spatial VAE, 
 \bibitem{bergstra2012random} J. Bergstra and Y. Bengio, ``Random Search for Hyper-Parameter Optimization,'' \emph{Journal of Machine Learning Research}, vol. 13, pp. 281--305, 2012. [Online]. Available: \url{https://www.jmlr.org/papers/v13/bergstra12a.html}
 \end{thebibliography}
 
+\clearpage
 \appendix
-\section{Supplementary Diagnostics}
+\section*{Appendix}
+
+\section{Hyperparameter Selection Evidence}
+\label{app:tuning}
+The classifier search compares batch size, training duration, learning rate, weight decay, and square-root inverse-frequency weighting motivated by class-balanced learning \citep{cui2019classbalanced}. The selected Fashion-MNIST evaluator uses learning rate $3\times10^{-4}$; the color evaluator uses $10^{-3}$. The unweighted color candidate wins the predefined mean accuracy/balanced-accuracy score, although weighting raises minimum validation recall from 25.00\% to 41.67\%. This trade-off motivates disclosure of balanced accuracy and per-class recall.
+
+\begin{figure}[ht]
+\centering
+\begin{minipage}{0.49\linewidth}
+  \includegraphics[width=\linewidth]{figures/classifier_hyperparameter_search.png}
+  \small (a) Classifier search
+\end{minipage}
+\hfill
+\begin{minipage}{0.49\linewidth}
+  \includegraphics[width=\linewidth]{figures/generator_hyperparameter_search.png}
+  \small (b) Generator pilot
+\end{minipage}
+\caption{Validation-only hyperparameter evidence. Short generator pilots select settings within each family and are not final quality results.}
+\end{figure}
+
+An initially unstable LDM produced standardized sampled latent SD 13.3 and maximum magnitude 327.3. Base width 64, exact posterior variance, and predicted-clean latent clipping at $\pm3$ reduce validation FID from 174.2 to 58.8 and sampled latent SD to 0.842. Pixel DDPM is tuned independently: exact-posterior sampling plus predicted-clean image clipping reduces validation FID from 68.86 to 34.04.
+
+\begin{figure}[ht]
+\centering
+\begin{minipage}{0.32\linewidth}
+  \includegraphics[width=\linewidth]{figures/ldm_capacity_sampler_diagnostic.png}
+  \small (a) LDM width/sampler
+\end{minipage}\hfill
+\begin{minipage}{0.32\linewidth}
+  \includegraphics[width=\linewidth]{figures/ldm_clipping_search.png}
+  \small (b) Latent clipping
+\end{minipage}\hfill
+\begin{minipage}{0.32\linewidth}
+  \includegraphics[width=\linewidth]{figures/ddpm_sampler_search.png}
+  \small (c) DDPM sampler
+\end{minipage}
+\caption{Validation-only diffusion stabilization diagnostics.}
+\end{figure}
+
+\clearpage
+\section{Evaluator and Dataset Diagnostics}
+\label{app:evaluator}
 \begin{figure}[ht]
   \centering
+  \includegraphics[width=0.95\linewidth]{figures/classifier_confusion_matrices.png}
+  \caption{Row-normalized evaluator confusion matrices. Generator feature and class metrics inherit these errors.}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\begin{minipage}{0.49\linewidth}
   \includegraphics[width=\linewidth]{figures/classifier_per_class_recall.png}
-  \caption{Per-class recall of each frozen evaluator.}
-  \label{fig:classifier-recall}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
+  \small (a) Per-class recall
+\end{minipage}\hfill
+\begin{minipage}{0.49\linewidth}
   \includegraphics[width=\linewidth]{figures/dataset_class_balance.png}
-  \caption{Ground-truth class proportions in the two test splits.}
+  \small (b) Test-set class balance
+\end{minipage}
+\caption{Evaluator reliability and dataset imbalance.}
+\end{figure}
+
+\clearpage
+\section{Distribution, Convergence, and Compute Diagnostics}
+\label{app:diagnostics}
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.98\linewidth]{figures/class_distributions.png}
+  \caption{Predicted class distributions averaged over five seeds. DDPM most closely follows the real evaluator distribution.}
 \end{figure}
 
 \begin{figure}[ht]
-  \centering
-  \includegraphics[width=\linewidth]{figures/diversity.png}
-  \caption{Class entropy and class-distribution JSD over five seeds.}
+\centering
+\begin{minipage}{0.56\linewidth}
+  \includegraphics[width=\linewidth]{figures/training_curves.png}
+  \small (a) Mean $\pm$ SD training curves
+\end{minipage}\hfill
+\begin{minipage}{0.42\linewidth}
+  \includegraphics[width=\linewidth]{figures/seed_variability.png}
+  \small (b) Seed-level FID
+\end{minipage}
+\caption{Optimization convergence and run-to-run variability. Loss magnitudes are not comparable across objectives.}
 \end{figure}
 
 \begin{figure}[ht]
-  \centering
-  \includegraphics[width=\linewidth]{figures/supporting_quality.png}
-  \caption{Supporting confidence, recognizability, and Sobel-gradient diagnostics.}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
+\centering
+\begin{minipage}{0.49\linewidth}
   \includegraphics[width=\linewidth]{figures/memory_breakdown.png}
-  \caption{Training and sampling peak allocated CUDA memory reported separately. The main compute table uses the larger system-level peak.}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.72\linewidth]{figures/model_size.png}
-  \caption{Complete-system trainable parameter counts. The LDM total includes its spatial VAE and latent denoiser.}
+  \small (a) Training and sampling memory
+\end{minipage}\hfill
+\begin{minipage}{0.49\linewidth}
+  \includegraphics[width=\linewidth]{figures/model_size.png}
+  \small (b) Complete-system parameters
+\end{minipage}
+\caption{Supporting resource diagnostics. The report package also contains all 30 per-seed metric rows and complete mean/SD tables in machine-readable CSV format.}
 \end{figure}
 
 \end{document}

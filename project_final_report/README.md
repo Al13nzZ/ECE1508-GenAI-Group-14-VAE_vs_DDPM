@@ -4,7 +4,7 @@
 NeurIPS package, package list, title/author structure, and numeric citation style
 retain the original project template. The content has been rewritten around the
 five-seed VAE/DDPM/LDM benchmark. A validated compiled copy is included as
-`report.pdf`.
+`report.pdf`; `Report_Template.tex` preserves the supplied formatting template.
 
 ## Rebuild generated material
 

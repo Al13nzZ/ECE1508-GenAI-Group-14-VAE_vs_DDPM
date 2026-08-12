@@ -1,0 +1,49 @@
+{
+  "classes": [
+    "Tshirts",
+    "Shirts",
+    "Kurtas",
+    "Tops",
+    "Briefs",
+    "Jeans",
+    "Trousers",
+    "Shorts",
+    "Bra",
+    "Dresses",
+    "Sarees",
+    "Track Pants",
+    "Sweaters",
+    "Sweatshirts",
+    "Jackets"
+  ],
+  "evaluator_config": {
+    "architecture": "residual_64_128_256_v1",
+    "seed": 1508,
+    "epochs": 40,
+    "batch_size": 256,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "classes": [
+      "Tshirts",
+      "Shirts",
+      "Kurtas",
+      "Tops",
+      "Briefs",
+      "Jeans",
+      "Trousers",
+      "Shorts",
+      "Bra",
+      "Dresses",
+      "Sarees",
+      "Track Pants",
+      "Sweaters",
+      "Sweatshirts",
+      "Jackets"
+    ]
+  },
+  "accuracy": 0.8805340829234013,
+  "balanced_accuracy": 0.7740155458450317,
+  "test_loss": 0.4851741012099421,
+  "training_seconds": 59.13895670000056,
+  "peak_gpu_memory_mb": 996.20947265625
+}

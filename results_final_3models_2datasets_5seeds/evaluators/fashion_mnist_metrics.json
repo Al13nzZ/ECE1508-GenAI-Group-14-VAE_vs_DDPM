@@ -1,0 +1,39 @@
+{
+  "classes": [
+    "T-shirt/top",
+    "Trouser",
+    "Pullover",
+    "Dress",
+    "Coat",
+    "Sandal",
+    "Shirt",
+    "Sneaker",
+    "Bag",
+    "Ankle boot"
+  ],
+  "evaluator_config": {
+    "architecture": "residual_64_128_256_v1",
+    "seed": 1508,
+    "epochs": 40,
+    "batch_size": 256,
+    "learning_rate": 0.0003,
+    "weight_decay": 0.0001,
+    "classes": [
+      "T-shirt/top",
+      "Trouser",
+      "Pullover",
+      "Dress",
+      "Coat",
+      "Sandal",
+      "Shirt",
+      "Sneaker",
+      "Bag",
+      "Ankle boot"
+    ]
+  },
+  "accuracy": 0.9423,
+  "balanced_accuracy": 0.9422999620437622,
+  "test_loss": 0.32426695184707643,
+  "training_seconds": 218.58681649999926,
+  "peak_gpu_memory_mb": 1028.552734375
+}
