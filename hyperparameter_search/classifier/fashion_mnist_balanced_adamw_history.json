@@ -1,0 +1,50 @@
+[
+  {
+    "epoch": 5,
+    "accuracy": 0.9286666666666666,
+    "balanced_accuracy": 0.9286667108535767,
+    "minimum_recall": 0.8066666722297668
+  },
+  {
+    "epoch": 10,
+    "accuracy": 0.924,
+    "balanced_accuracy": 0.9239999651908875,
+    "minimum_recall": 0.7850000262260437
+  },
+  {
+    "epoch": 15,
+    "accuracy": 0.9121666666666667,
+    "balanced_accuracy": 0.9121667146682739,
+    "minimum_recall": 0.7116666436195374
+  },
+  {
+    "epoch": 20,
+    "accuracy": 0.9396666666666667,
+    "balanced_accuracy": 0.9396666288375854,
+    "minimum_recall": 0.7916666865348816
+  },
+  {
+    "epoch": 25,
+    "accuracy": 0.9321666666666667,
+    "balanced_accuracy": 0.9321667551994324,
+    "minimum_recall": 0.8333333134651184
+  },
+  {
+    "epoch": 30,
+    "accuracy": 0.9343333333333333,
+    "balanced_accuracy": 0.934333324432373,
+    "minimum_recall": 0.7733333110809326
+  },
+  {
+    "epoch": 35,
+    "accuracy": 0.9445,
+    "balanced_accuracy": 0.9444999694824219,
+    "minimum_recall": 0.8483333587646484
+  },
+  {
+    "epoch": 40,
+    "accuracy": 0.9456666666666667,
+    "balanced_accuracy": 0.9456666707992554,
+    "minimum_recall": 0.8199999928474426
+  }
+]

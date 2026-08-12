@@ -1,0 +1,7 @@
+{
+  "split": "fixed stratified 90/10 split of each training set",
+  "selection_seed": 1508,
+  "official_test_images_used_for_selection": 0,
+  "selection_metric": "mean of validation accuracy and validation balanced accuracy",
+  "candidate_count_per_dataset": 4
+}

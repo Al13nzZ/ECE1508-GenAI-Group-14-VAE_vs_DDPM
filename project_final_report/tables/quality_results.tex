@@ -1,0 +1,13 @@
+\begin{tabular}{llrrrrrr}
+\toprule
+Dataset & Model & Feature FID $\downarrow$ & Feature KID $\downarrow$ & Confidence $\uparrow$ & Recog. (\%) $\uparrow$ & Entropy $\uparrow$ & JSD $\downarrow$ \\
+\midrule
+Fashion-MNIST & VAE & 119.10 $\pm$ 2.87 & 1.113 $\pm$ 0.021 & 0.794 $\pm$ 0.004 & 57.3 $\pm$ 1.0 & 0.868 $\pm$ 0.008 & 0.077 $\pm$ 0.005 \\
+ & DDPM & 29.64 $\pm$ 1.49 & 0.349 $\pm$ 0.019 & 0.928 $\pm$ 0.002 & 85.3 $\pm$ 0.7 & 0.973 $\pm$ 0.004 & 0.015 $\pm$ 0.002 \\
+ & LDM & 52.01 $\pm$ 0.71 & 0.687 $\pm$ 0.015 & 0.951 $\pm$ 0.002 & 89.9 $\pm$ 0.6 & 0.960 $\pm$ 0.003 & 0.025 $\pm$ 0.002 \\
+\midrule
+Fashion Product Images (RGB, 15 classes) & VAE & 83.88 $\pm$ 3.80 & 0.940 $\pm$ 0.049 & 0.790 $\pm$ 0.006 & 57.2 $\pm$ 1.2 & 0.644 $\pm$ 0.019 & 0.061 $\pm$ 0.007 \\
+ & DDPM & 16.67 $\pm$ 0.85 & 0.208 $\pm$ 0.016 & 0.879 $\pm$ 0.003 & 75.6 $\pm$ 0.7 & 0.728 $\pm$ 0.010 & 0.006 $\pm$ 0.001 \\
+ & LDM & 33.65 $\pm$ 2.21 & 0.429 $\pm$ 0.045 & 0.896 $\pm$ 0.007 & 79.0 $\pm$ 1.5 & 0.734 $\pm$ 0.008 & 0.027 $\pm$ 0.003 \\
+\bottomrule
+\end{tabular}

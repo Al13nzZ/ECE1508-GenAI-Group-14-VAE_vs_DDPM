@@ -1,0 +1,28 @@
+[
+  {
+    "dataset": "fashion_mnist",
+    "name": "balanced_adamw",
+    "batch": 256,
+    "epochs": 40,
+    "lr": 0.0003,
+    "wd": 0.0001,
+    "weighted": false,
+    "val_accuracy": 0.9456666666666667,
+    "val_balanced_accuracy": 0.9456666707992554,
+    "val_minimum_recall": 0.8199999928474426,
+    "selection_score": 0.945666668732961
+  },
+  {
+    "dataset": "fashion_product_images",
+    "name": "higher_lr",
+    "batch": 256,
+    "epochs": 40,
+    "lr": 0.001,
+    "wd": 0.0001,
+    "weighted": false,
+    "val_accuracy": 0.8876404494382022,
+    "val_balanced_accuracy": 0.8084604740142822,
+    "val_minimum_recall": 0.25,
+    "selection_score": 0.8480504617262422
+  }
+]

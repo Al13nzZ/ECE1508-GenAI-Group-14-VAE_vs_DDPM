@@ -1,0 +1,26 @@
+[
+  {
+    "epoch": 5,
+    "accuracy": 0.10986267166042447,
+    "balanced_accuracy": 0.10489831864833832,
+    "minimum_recall": 0.0
+  },
+  {
+    "epoch": 10,
+    "accuracy": 0.5892634207240949,
+    "balanced_accuracy": 0.3277848958969116,
+    "minimum_recall": 0.0
+  },
+  {
+    "epoch": 15,
+    "accuracy": 0.7540574282147315,
+    "balanced_accuracy": 0.5685869455337524,
+    "minimum_recall": 0.0
+  },
+  {
+    "epoch": 20,
+    "accuracy": 0.7890137328339576,
+    "balanced_accuracy": 0.6146088242530823,
+    "minimum_recall": 0.0
+  }
+]

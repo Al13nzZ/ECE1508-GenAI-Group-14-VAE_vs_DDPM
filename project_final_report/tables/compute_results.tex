@@ -1,0 +1,13 @@
+\begin{tabular}{llrrrr}
+\toprule
+Dataset & Model & Train (min) $\downarrow$ & Batched sample (ms/image) $\downarrow$ & Parameters (M) $\downarrow$ & Peak GPU (MB) $\downarrow$ \\
+\midrule
+Fashion-MNIST & VAE & 1.61 $\pm$ 0.00 & 0.036 $\pm$ 0.000 & 1.955 $\pm$ 0.000 & 6301 $\pm$ 4 \\
+ & DDPM & 5.55 $\pm$ 0.00 & 10.611 $\pm$ 0.008 & 5.787 $\pm$ 0.000 & 7683 $\pm$ 0 \\
+ & LDM & 3.48 $\pm$ 0.05 & 0.763 $\pm$ 0.001 & 7.743 $\pm$ 0.000 & 5196 $\pm$ 0 \\
+\midrule
+Fashion Product Images (RGB, 15 classes) & VAE & 1.66 $\pm$ 0.00 & 0.036 $\pm$ 0.000 & 1.955 $\pm$ 0.000 & 6318 $\pm$ 0 \\
+ & DDPM & 5.62 $\pm$ 0.01 & 10.624 $\pm$ 0.011 & 5.787 $\pm$ 0.000 & 7698 $\pm$ 0 \\
+ & LDM & 3.78 $\pm$ 0.01 & 0.765 $\pm$ 0.003 & 7.743 $\pm$ 0.000 & 5211 $\pm$ 0 \\
+\bottomrule
+\end{tabular}

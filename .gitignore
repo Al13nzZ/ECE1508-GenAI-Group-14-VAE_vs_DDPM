@@ -24,6 +24,36 @@ benchmark_v2_error.log
 benchmark_v2.pid
 benchmark_v2_smoke/
 rejected_classifier_run/
+smoke_validation/
+classifier_tuning.log
+classifier_tuning_error.log
+classifier_tuning.pid
+generator_tuning.log
+generator_tuning_error.log
+generator_tuning.pid
+hyperparameter_search/generators/evaluator/
+hyperparameter_search/classifier/classifier_search_partial.csv
+hyperparameter_search/ldm_diagnostic/ldm_diagnostic_partial.csv
+final_benchmark.log
+final_benchmark_error.log
+final_benchmark.pid
+ldm_diagnostic.log
+ldm_diagnostic_error.log
+ldm_diagnostic.pid
+ldm_clipping.log
+ldm_clipping_error.log
+ldm_clipping.pid
+hyperparameter_search/ldm_clipping/diagnostic_checkpoint.pt
+ddpm_sampler.log
+ddpm_sampler_error.log
+ddpm_sampler.pid
+
+# LaTeX build intermediates (keep project_final_report/report.pdf)
+project_final_report/*.aux
+project_final_report/*.log
+project_final_report/*.out
+project_final_report/*.xdv
+project_final_report/*.synctex.gz
 
 # Editor and OS files
 .vscode/

@@ -1,0 +1,8 @@
+{
+  "selection_dataset": "Fashion-MNIST training split",
+  "selection_seed": 1508,
+  "generator_training_images": 59000,
+  "held_out_validation_images": 1000,
+  "official_test_images_used_for_selection": 0,
+  "selection_metric": "classifier-feature FID"
+}
